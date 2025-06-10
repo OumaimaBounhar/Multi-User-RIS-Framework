@@ -96,9 +96,9 @@ class Parameters :
         self.precision = precision
         self.blabla_other_states = blabla_other_states
         self.min_representatives_q_learning_train = min_representatives_q_learning_train
-        self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0] 
+        self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0]
         self.min_representatives_q_learning_test = min_representatives_q_learning_test
-        self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0] 
+        self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0]
         self.learning_rate_decay = learning_rate_decay
         self.learning_rate_min = learning_rate_min
         
@@ -125,3 +125,94 @@ class Parameters :
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
+
+    def get_channels_parameters(self):
+        if self.type_channel == "IID":
+            return self.n_receivers, self.n_transmitters, self.n_RIS_elements, self.type_channel, self.mean_channel, self.std_channel
+        if self.type_channel == "half-spaced ULAs":
+            return self.n_receivers, self.n_transmitters, self.n_RIS_elements, self.type_channel, self.paths, self.alpha
+
+    def get_noise_parameters(self):
+        return self.mean_noise, self.std_noise
+
+    def get_symbols_parameters(self):
+        return self.type_modulation 
+
+    def get_codebook_parameters(self):
+        return self.size_codebooks, self.type_codebooks
+
+    def set_n_RIS_elements(self,n_RIS_elements:int):
+        self.n_RIS_elements = n_RIS_elements
+
+    def set_SNR(self, snr:int):
+        self.SNR = snr
+
+    def set_noise(self, mean_noise:float, std_noise:float):
+        self.mean_noise = mean_noise
+        self.std_noise = std_noise
+
+    def get_q_learning_parameters(self):
+        return {
+            "gamma": self.gamma,
+            "n_episodes": self.n_episodes,
+            "len_path": self.len_path,
+            "n_time_steps": self.n_time_steps_ql,
+            "initial_q_value": self.initial_q_value,
+            "learning_rate_init": self.learning_rate_init,
+            "epsilon" : self.epsilon,
+            "epsilon_min": self.epsilon_min,
+            "epsilon_decay": self.epsilon_decay,
+            "delta_init": self.delta_init,
+            "delta_final": self.delta_final,
+            "delta_decay": self.delta_decay,
+            "len_window_action": self.len_window_action,
+            "saving_freq": self.saving_freq_QL,
+            "test_freq": self.test_freq_QL,
+            "precision": self.precision,
+            "blabla_other_states": self.blabla_other_states,
+            "min_representatives_q_learning_train": self.min_representatives_q_learning_train,
+            "max_samples_q_learning_train": self.max_samples_q_learning_train,
+            "min_representatives_q_learning_test": self.min_representatives_q_learning_test,
+            "max_samples_q_learning_test": self.max_samples_q_learning_test,
+            "n_channels_train": self.n_channels_train_QL,
+            "learning_rate_decay": self.learning_rate_decay,
+            "learning_rate_min": self.learning_rate_min,
+            "snr_values": self.snr_values,
+            "SNR" : self.SNR,
+        }
+
+    def get_dqn_parameters(self):
+        return {
+            "gamma": self.gamma,
+            "learning_rate_init": self.learning_rate_init,
+            "params_list": self.params_list,
+            "batch_size": self.batch_size,
+            "replay_buffer_memory_size": self.replay_buffer_memory_size,
+            "loss_fct": self.loss_fct,
+            "n_epochs": self.n_epochs,
+            "n_time_steps": self.n_time_steps_dqn,
+            "freq_update_target": self.freq_update_target,
+            "max_len_path": self.max_len_path,
+            "epsilon": self.epsilon,
+            "epsilon_decay": self.epsilon_decay,
+            "epsilon_min": self.epsilon_min,
+            "delta_init": self.delta_init,
+            "delta_decay": self.delta_decay,
+            "train_or_test": self.train_or_test,
+            "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
+            "saving_freq": self.saving_freq_DQN,
+            "test_freq": self.test_freq_DQN,
+            "n_channels_train": self.n_channels_train_DQN,
+            "max_norm": self.max_norm,
+            "do_gradient_clipping": self.do_gradient_clipping,
+            "snr_values": self.snr_values,
+            "SNR" : self.SNR,
+        }
+
+    def save_to_file(self, filename, params_type='dqn'):
+        # Save the parameters to a file, based on the type
+        params = self.get_dqn_parameters() if params_type == 'dqn' else self.get_q_learning_parameters()
+        with open(filename, 'w') as file:
+            for key, value in params.items():
+                file.write(f"{key}: {value}\n")
+                
