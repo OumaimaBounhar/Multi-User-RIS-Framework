@@ -5,7 +5,8 @@ import numpy as np
 
 
 class Parameters :
-    """ Contains all of the parameters for our simulation
+    """
+    Contains all of the parameters for our simulation
     """
     def __init__(   self, 
                     n_receivers: int = 64, 
