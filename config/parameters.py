@@ -3,25 +3,30 @@ from typing import Tuple
 import math
 import numpy as np
 
-
 class Parameters :
-    """
-    Contains all of the parameters for our simulation
+    """ Contains all of the parameters for our simulation:
+    For the channel: N_BS = number of antennas of the BS, N_UE = Number of users or number of antennas of the user, N_RIS = Number of reflective elements on the RIS,
+    type_channel is "IID" => with parameters mean_channel and std_channel /or "half-spaced ULAs" => with parameters paths and lambda
+    For the noise: mean_noise and std_noise
+    For the symbols sent: type_modulation
+    For the codebooks: One codebook is for the communication phase, the other one is for the pilots sent: type_codebooks is a list of 2 elements, both of them can be "DFT" or "random"
+    For DQN/Q-Learning: Various hyperparameters like gamma, learning_rate, etc.
     """
     def __init__(   self, 
-                    n_receivers: int = 64, 
-                    n_transmitters: int = 1, 
-                    n_RIS_elements: int = 100, 
-                    size_codebooks: List[int] = [20,20], 
-                    type_codebooks: List[str] = ["Narrow_8","Hierarchical_3_2"],
-                    mean_noise: float = 0,
+                    N_R:int = 64, 
+                    N_T:int = 1, 
+                    N_RIS:int = 100, 
+                    size_codebooks:List[int] = [20,20], 
+                    type_codebooks:List[str] = ["Narrow_8","Hierarchical_3_2"],
+                    mean_noise:float = 0,
                     SNR: int = 30,
-                    snr_values: List[int] = [-100,-50,0],
+                    snr_values:List[int] = [-100,-50,0],
+                    modification_channel: int = 0,
                     type_channel:str = "half-spaced ULAs",
-                    type_modulation: str = "BPSK", 
-                    mean_channel: float = 0, 
-                    std_channel: List[float] = [], 
-                    std_alpha = 0, 
+                    type_modulation:str = "BPSK", 
+                    mean_channel:float=0, 
+                    std_channel:List[float] = [], 
+                    sigma_alpha = 0, 
                     gamma: float = 0.99,
                     learning_rate_init: float = 5e-4,
                     params_list: List[int] = [32, 64],
@@ -33,7 +38,7 @@ class Parameters :
                     n_epochs: int = 10000,
                     n_time_steps_dqn: int = 200,
                     n_channels_train_DQN: int = 10,
-                    freq_update_target: int = 10,
+                    freq_update_target: int = 2,
                     max_len_path: int = 20,
                     epsilon: float = 1,
                     epsilon_decay: float = 0.999,
@@ -52,7 +57,10 @@ class Parameters :
                     saving_freq_QL: int = 1,
                     test_freq_QL: int = 1,
                     delta_final: float = 5 * 1e-2, 
+                    len_window_action: int = 1, 
+                    len_window_channel: int = 1, 
                     precision: int = 2,  
+                    blabla_other_states: int = 1, 
                     min_representatives_q_learning_train: int = 100,  
                     min_representatives_q_learning_test: int = 10,
                     learning_rate_decay: float = 0.99,
@@ -60,16 +68,22 @@ class Parameters :
                     ) :
         
         ### For the channel ###
-        self.n_receivers = n_receivers # Number antennas at the Receiver
-        self.n_transmitters = n_transmitters # Number antennas at the Transmitter
-        self.n_RIS_elements = n_RIS_elements  # Number Reflective elements at the RIS
-        self.std_alpha = std_alpha # Variance of the attenuation of paths 
+        
+        self.N_R = N_R # Number antennas at the Receiver
+        self.N_T = N_T # Number antennas at the Transmitter
+        self.N_RIS = N_RIS  # Number Reflective elements at the RIS
+        self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
+        self.modification_channel = modification_channel
+        self.type_channel = type_channel
+        self.len_window_channel = len_window_channel
         if type_channel == "IID":
             self.mean_channel = mean_channel
             self.std_channel = std_channel
         if type_channel == "half-spaced ULAs":
             self.paths = [1,1,0] # Number of paths for the link Transmitter-RIS, RIS-Receiver, Transmitter-Receiver
-            self.alpha = np.array([[[1,0.3,0.3],[std_alpha]*3],[[1,0.3,0.3],[std_alpha]*3],[[0.5,0.3,0.3],[std_alpha]*3]]) # Attenuation of paths [1 for the LOS, less for NLOS]
+            # self.paths = [2,2,0] # Ex 53
+            # self.paths = [1,1,0] # Ex 54
+            self.alpha = np.array([[[1,0.3,0.3],[sigma_alpha]*3],[[1,0.3,0.3],[sigma_alpha]*3],[[0.5,0.3,0.3],[sigma_alpha]*3]]) # Attenuation of paths [1 for the LOS, less for NLOS]
         
         ### For the noise and symbols sent ###
         self.SNR = SNR
@@ -97,9 +111,9 @@ class Parameters :
         self.precision = precision
         self.blabla_other_states = blabla_other_states
         self.min_representatives_q_learning_train = min_representatives_q_learning_train
-        self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0]
+        self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0] 
         self.min_representatives_q_learning_test = min_representatives_q_learning_test
-        self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0]
+        self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0] 
         self.learning_rate_decay = learning_rate_decay
         self.learning_rate_min = learning_rate_min
         
@@ -126,32 +140,34 @@ class Parameters :
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
-
+        
     def get_channels_parameters(self):
         if self.type_channel == "IID":
-            return self.n_receivers, self.n_transmitters, self.n_RIS_elements, self.type_channel, self.mean_channel, self.std_channel
+            return self.N_R, self.N_T, self.N_RIS, self.type_channel, self.mean_channel, self.std_channel
         if self.type_channel == "half-spaced ULAs":
-            return self.n_receivers, self.n_transmitters, self.n_RIS_elements, self.type_channel, self.paths, self.alpha
-
+            return self.N_R, self.N_T, self.N_RIS, self.type_channel, self.paths, self.alpha
+    
     def get_noise_parameters(self):
         return self.mean_noise, self.std_noise
-
+    
     def get_symbols_parameters(self):
         return self.type_modulation 
-
+    
     def get_codebook_parameters(self):
         return self.size_codebooks, self.type_codebooks
-
-    def set_n_RIS_elements(self,n_RIS_elements:int):
-        self.n_RIS_elements = n_RIS_elements
-
+    
+    def set_N_RIS(self,N_RIS:int):
+        self.N_RIS = N_RIS
+    
     def set_SNR(self, snr:int):
         self.SNR = snr
+        # print(f'SNR = {snr}')
 
     def set_noise(self, mean_noise:float, std_noise:float):
         self.mean_noise = mean_noise
         self.std_noise = std_noise
-
+        # print(f'std noise = {std_noise}')
+    
     def get_q_learning_parameters(self):
         return {
             "gamma": self.gamma,
@@ -181,7 +197,7 @@ class Parameters :
             "snr_values": self.snr_values,
             "SNR" : self.SNR,
         }
-
+    
     def get_dqn_parameters(self):
         return {
             "gamma": self.gamma,
@@ -209,11 +225,10 @@ class Parameters :
             "snr_values": self.snr_values,
             "SNR" : self.SNR,
         }
-
+    
     def save_to_file(self, filename, params_type='dqn'):
         # Save the parameters to a file, based on the type
         params = self.get_dqn_parameters() if params_type == 'dqn' else self.get_q_learning_parameters()
         with open(filename, 'w') as file:
             for key, value in params.items():
                 file.write(f"{key}: {value}\n")
-                
