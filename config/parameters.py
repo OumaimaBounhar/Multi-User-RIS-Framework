@@ -3,6 +3,7 @@ from typing import Tuple
 import math
 import numpy as np
 
+
 class Parameters :
     """ Contains all of the parameters for our simulation:
     For the channel: N_BS = number of antennas of the BS, N_UE = Number of users or number of antennas of the user, N_RIS = Number of reflective elements on the RIS,
@@ -16,7 +17,7 @@ class Parameters :
                     N_R:int = 64, 
                     N_T:int = 1, 
                     N_RIS:int = 100, 
-                    size_codebooks:List[int] = [20,20], 
+                    size_codebooks:List[int] = [16,30], 
                     type_codebooks:List[str] = ["Narrow_8","Hierarchical_3_2"],
                     mean_noise:float = 0,
                     SNR: int = 30,
@@ -39,6 +40,7 @@ class Parameters :
                     n_time_steps_dqn: int = 200,
                     n_channels_train_DQN: int = 10,
                     freq_update_target: int = 2,
+                    tau: float = 0.05,
                     max_len_path: int = 20,
                     epsilon: float = 1,
                     epsilon_decay: float = 0.999,
@@ -64,7 +66,8 @@ class Parameters :
                     min_representatives_q_learning_train: int = 100,  
                     min_representatives_q_learning_test: int = 10,
                     learning_rate_decay: float = 0.99,
-                    learning_rate_min: float = 1e-4
+                    learning_rate_min: float = 1e-4,
+                    # input_dims: int = None,
                     ) :
         
         ### For the channel ###
@@ -130,6 +133,7 @@ class Parameters :
         self.n_time_steps_dqn = n_time_steps_dqn
         self.n_channels_train_DQN = n_channels_train_DQN
         self.freq_update_target = freq_update_target
+        self.tau = tau
         self.max_len_path = max_len_path
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
@@ -140,6 +144,7 @@ class Parameters :
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
+        # self.input_dims = input_dims
         
     def get_channels_parameters(self):
         if self.type_channel == "IID":
@@ -196,6 +201,7 @@ class Parameters :
             "learning_rate_min": self.learning_rate_min,
             "snr_values": self.snr_values,
             "SNR" : self.SNR,
+            "size_codebooks" :self.size_codebooks,
         }
     
     def get_dqn_parameters(self):
@@ -209,6 +215,7 @@ class Parameters :
             "n_epochs": self.n_epochs,
             "n_time_steps": self.n_time_steps_dqn,
             "freq_update_target": self.freq_update_target,
+            "tau": self.tau,
             "max_len_path": self.max_len_path,
             "epsilon": self.epsilon,
             "epsilon_decay": self.epsilon_decay,
@@ -224,6 +231,8 @@ class Parameters :
             "do_gradient_clipping": self.do_gradient_clipping,
             "snr_values": self.snr_values,
             "SNR" : self.SNR,
+            "size_codebooks" :self.size_codebooks,
+            # "input_dims" : self.input_dims,
         }
     
     def save_to_file(self, filename, params_type='dqn'):
@@ -232,3 +241,4 @@ class Parameters :
         with open(filename, 'w') as file:
             for key, value in params.items():
                 file.write(f"{key}: {value}\n")
+                

@@ -1,8 +1,8 @@
 import numpy as np
 from config.parameters import Parameters
-from envs.codebooks import Codebooks
-from envs.signal import Signal
-from envs.channel import Channel
+from systemModel.codebooks import Codebooks
+from systemModel.signal import Signal
+from systemModel.channel import Channel
 
 class Feedback:
     """To compute the received feedback (scalar or vector) that will be used to infer the parametrization of the RIS"""

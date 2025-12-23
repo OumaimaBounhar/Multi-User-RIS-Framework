@@ -6,7 +6,7 @@ class Signal:
     """
     Sends a symbol/symbols from a given constellation = type_modulation 
     """
-
+    
     def __init__(self, parameters:Parameters):
         self.parameters = parameters
         

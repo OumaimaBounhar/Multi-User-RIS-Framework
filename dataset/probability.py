@@ -9,6 +9,7 @@ from typing import Tuple
 from config.parameters import Parameters
 from dataset.monteCarlo import Dataset_probability 
 
+
 class Probability:
     """Updates a probability distribution (probability of being the best codeword):
     Input: 

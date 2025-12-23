@@ -2,10 +2,10 @@ import numpy as np
 from typing import List
 import random as r
 from config.parameters import Parameters
-from envs.feedback import Feedback
-from envs.channel import Channel
-from methods.Probability import Probability
-from reinforcement_learning.q_Learning.states import *
+from systemModel.feedback import Feedback
+from systemModel.channel import Channel
+from methods.methods import Probability
+from reinforcement_learning.states import State
 from reinforcement_learning.deep_q_learning.deep_q_learning import *
 import torch
 
