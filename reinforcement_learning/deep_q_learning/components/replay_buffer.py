@@ -19,7 +19,7 @@ class ReplayBuffer():
         #Initialize the replay buffer tensors
         self.current_state_memory = np.zeros([replay_buffer_memory_size, input_dims], dtype=np.float32) # Make the buffer float32 (saves ~50% on memory)
         self.next_state_memory = np.zeros([replay_buffer_memory_size, input_dims], dtype=np.float32)
-        self.action_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.float32)
+        self.action_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.int64)
         self.reward_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.float32)
         
         #Index to keep track of where to store the data

@@ -1,11 +1,17 @@
 import numpy as np 
 from tqdm import tqdm
-import torch
+from matplotlib import pyplot as plt 
+
 import os
+import torch
 import torch.nn as nn
+
 from reinforcement_learning.env import Environment 
 from config.parameters import Parameters
-from matplotlib import pyplot as plt 
+from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_update_step
+from reinforcement_learning.deep_q_learning.components.network import DQN
+from reinforcement_learning.deep_q_learning.components.replay_buffer import ReplayBuffer
+
 
 class DeepQLearningAgent():
     """ Class for Dep Q-Learning Algorithm"""
@@ -24,32 +30,52 @@ class DeepQLearningAgent():
         self.n_states = self.environment.state_space.get_n_states()
         self.n_actions = self.environment.get_size_codebook()[1]
         
-        params_dict = self.simu_parameters.get_dqn_parameters()
-        # self.input_dims = params_dict["input_dims"]
-        # print(f"input dims : {input_dims}")
-        
-        # n_states = params_dict["n_states"]
-        # n_actions = params_dict["n_actions"]
-        
         ## Parameters
-        
+        params_dict = self.simu_parameters.get_dqn_parameters()
+        learning_rate = params_dict["learning_rate_init"]
         batch_size = params_dict["batch_size"]
         replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
-        # Set the maximum allowed gradient norm
         
-        self.delta_final = environment.get_delta_final() ## Final degree of precision we want to reach, should correspond to the one in states
-    
-        ## Dataset
+        self.delta_final = environment.get_delta_final() ## Final degree of precision we want to reach
+
+        # ---- Dataset ----
         self.dataset_train,self.dataset_test = environment.get_dataset()
+
+        # ---- Device ----
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # ---- Networks ----
+        self.evaluation_q_network = DQN(
+                                        self.simu_parameters,
+                                        self.input_dims,
+                                        self.n_actions)
         
-        self.evaluation_q_network = DQN(self.simu_parameters, self.input_dims, self.n_actions)
-        self.target_q_network = DQN(self.simu_parameters, self.input_dims, self.n_actions)
+        self.target_q_network = DQN(
+                                    self.simu_parameters,
+                                    self.input_dims,
+                                    self.n_actions)
+        
+        # Move networks to device
+        self.evaluation_q_network.to(self.device)
+        self.target_q_network.to(self.device)
 
         # the target network is initialized with the same weights as the evaluation network
         self.target_q_network.load_state_dict(self.evaluation_q_network.state_dict())
-                
-        self.replay_buffer = ReplayBuffer(replay_buffer_memory_size, batch_size, input_dims)
+
+        # ---- Optimizer ----
+        # The network is less pure with the optimizer, it needs to be in the agent.
+        self.optimizer = torch.optim.Adam(
+                                            self.evaluation_q_network.parameters(), # Pass parameters not module object
+                                            learning_rate,
+                                            weight_decay=1e-4)
+
+        # ---- Replay Buffer ----
+        self.replay_buffer = ReplayBuffer(
+                                            replay_buffer_memory_size,
+                                            batch_size, 
+                                            input_dims)
         
+        # ---- Policy  ----
         self.policy = np.zeros([self.n_states, self.n_actions])
         
     def choose_action(self, state, epsilon):
@@ -267,60 +293,6 @@ class DeepQLearningAgent():
         for target_param, local_param in zip(target_model.parameters(),local_model.parameters()):
             target_param.data.copy_(tau*local_param.data + (1-tau)*target_param.data)
             
-    def learn(self, current_state_batch, action_batch, reward_batch, next_state_batch,  params_dict = {}):
-        
-        gamma =  params_dict["gamma"]
-        max_norm = params_dict["max_norm"] 
-        do_gradient_clipping = params_dict["do_gradient_clipping"]
-        
-        # print(f'max_norm: {max_norm}')
-        # print(f'do_gradient_clipping: {do_gradient_clipping}')
-        # print(f'type(max_norm): {type(max_norm)}')
-        # print(f'type(do_gradient_clipping): {type(do_gradient_clipping)}')
-        
-        self.evaluation_q_network.train()
-        self.target_q_network.eval() # So that we don't calculate the gradient of the Target Q Network
-
-        # Convert batch data to PyTorch tensors
-        current_state_tensor = torch.tensor(current_state_batch, dtype=torch.float32)
-        next_state_tensor = torch.tensor(next_state_batch, dtype=torch.float32)
-        reward_tensor = torch.tensor(reward_batch, dtype=torch.float32)
-        
-        # Get Q-values for the current state-action pairs
-        q_values_current = self.evaluation_q_network(current_state_tensor)
-        
-        # Use the target network to get Q-values for the next state for stability
-        with torch.no_grad(): # Gradient calculation is disabled to save memory and speed up the process.
-            q_values_next = self.target_q_network(next_state_tensor)
-        
-        # Get the maximum Q-value for each next state
-        max_q_values_next = torch.max(q_values_next, dim=1)[0]
-        
-        # Calculate the target Q-values using the Bellman equation
-        target_q_values = reward_tensor.squeeze() + (gamma * max_q_values_next)
-        
-        # Calculate the loss between the predicted and target Q-values
-        # selected_q_values = torch.zeros([len(action_batch),1])
-        # for i, action in enumerate(action_batch):
-        #     selected_q_values[i] = q_values_current[i, action]
-        
-        action_batch = torch.tensor(action_batch, dtype=torch.long).squeeze()
-        selected_q_values = q_values_current.gather(1, action_batch.unsqueeze(1)).squeeze()
-
-        loss = self.evaluation_q_network.loss_fct(selected_q_values, target_q_values)
-        
-        # Backpropagation
-        self.evaluation_q_network.optimizer.zero_grad()
-        loss.backward()
-        
-        # Gradient clipping by norm
-        if do_gradient_clipping:
-            torch.nn.utils.clip_grad_norm_(self.evaluation_q_network.network.parameters(), max_norm)
-        self.evaluation_q_network.optimizer.step()
-        
-        return loss.item()
-
-
 def save_model_complexity(model, params_dict, filename="complexity_report.txt"):
     """Compute and save the model complexity and memory usage."""
     
