@@ -239,7 +239,7 @@ class DeepQLearningAgent():
             epsilon = epsilon.step()
             
             # Update delta
-            self.environment.delta = delta.step()
+            self.environment.delta = self.delta_schedule.step()
             print(f'[INFO] Delta value : f{delta}')
             
             # Update target network every `target_update_freq` epochs
