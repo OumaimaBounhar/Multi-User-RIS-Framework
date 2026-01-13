@@ -37,7 +37,6 @@ class Environment():
         self.len_window_channel = parameters.len_window_channel
         
         self.delta = parameters.delta_init ## Initial delta
-        self.delta_decay = parameters.delta_decay ##  delta decay rate
         
     def reset_prior(self):
         ## the prior is set to the initial one (index = 0)
@@ -153,9 +152,6 @@ class Environment():
     
     def get_size_states(self):
         return self.size_states
-    
-    def get_delta_final(self):
-        return self.state_space.get_delta()
     
     def set_delta_current(self,delta):
         self.delta = delta

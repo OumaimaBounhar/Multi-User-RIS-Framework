@@ -11,10 +11,11 @@ from config.parameters import Parameters
 from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_update_step
 from reinforcement_learning.deep_q_learning.components.network import DQN
 from reinforcement_learning.deep_q_learning.components.replay_buffer import ReplayBuffer
+from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule
 
 
 class DeepQLearningAgent():
-    """ Class for Dep Q-Learning Algorithm"""
+    """ Class for Deep Q-Learning Algorithm"""
     
     def __init__(self,
                     input_dims: int, #we input the state index
@@ -35,8 +36,12 @@ class DeepQLearningAgent():
         learning_rate = params_dict["learning_rate_init"]
         batch_size = params_dict["batch_size"]
         replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
-        
-        self.delta_final = environment.get_delta_final() ## Final degree of precision we want to reach
+        epsilon_init = params_dict["epsilon_init"],
+        epsilon_decay = params_dict["epsilon_decay"]
+        epsilon_min = params_dict["epsilon_min"]
+        delta_init = params_dict["delta_init"],
+        delta_decay = params_dict["delta_decay"]
+        delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
 
         # ---- Dataset ----
         self.dataset_train,self.dataset_test = environment.get_dataset()
@@ -75,11 +80,31 @@ class DeepQLearningAgent():
                                             batch_size, 
                                             input_dims)
         
+        # ---- Schedules ----
+        self.epsilon_schedule = multiplicativeDecaySchedule(
+                                                            init_value = epsilon_init,
+                                                            decay = epsilon_decay,
+                                                            min_value = epsilon_min
+                                                            )
+        
+        self.delta_schedule = multiplicativeDecaySchedule(
+                                                            init_value = delta_init,
+                                                            decay = delta_decay,
+                                                            min_value = delta_min
+                                                            )
+        
+        # Initialization of delta value controlled by the environment for the stopping criteria
+        self.environment.delta = self.delta_schedule.get()
+
         # ---- Policy  ----
         self.policy = np.zeros([self.n_states, self.n_actions])
         
-    def choose_action(self, state, epsilon):
+    def choose_action(self, state):
         """ Choose an action following the Epsilon Greedy Policy"""
+
+        # Initialization of epsilon value
+        epsilon = self.epsilon_schedule.get()
+
         if np.random.random() < epsilon :
             action = np.random.randint(self.n_actions)
         else :
@@ -93,15 +118,12 @@ class DeepQLearningAgent():
         """" Train the Deep Q-Learning Network """
         
         batch_size = params_dict["batch_size"]
-        epsilon_min = params_dict["epsilon_min"]
         n_epochs = params_dict["n_epochs"]
         n_time_steps = params_dict["n_time_steps"]
-        epsilon_decay = params_dict["epsilon_decay"]
         max_len_path = params_dict["max_len_path"]
         train_or_test = params_dict["train_or_test"]
         saving_freq = params_dict["saving_freq"]
         test_freq = params_dict["test_freq"]
-        epsilon = params_dict["epsilon"]
         n_channels_train = params_dict["n_channels_train"]
         freq_update_target = params_dict["freq_update_target"]
         tau = params_dict["tau"]
@@ -168,7 +190,9 @@ class DeepQLearningAgent():
                         current_state = next_state
                         
                         # Stop condition in a terminal state
-                        delta = self.environment.get_delta_current()
+                        delta = self.environment.delta
+                        print(f'delta value in env = {self.environment.get_delta_current()}')
+                        print(f'delta value in agent = {delta}')
                         
                         if train_or_test:
                             #print(current_state)
@@ -212,11 +236,11 @@ class DeepQLearningAgent():
 
             # update the epsilon value
             epsilons.append(epsilon)
-            epsilon = max(epsilon * epsilon_decay, epsilon_min)
+            epsilon = epsilon.step()
             
-            # update delta
-            self.environment.delta = max(self.environment.delta*self.environment.delta_decay, self.delta_final)
-            print(f'[INFO] Delta value : f{self.environment.delta}')
+            # Update delta
+            self.environment.delta = delta.step()
+            print(f'[INFO] Delta value : f{delta}')
             
             # Update target network every `target_update_freq` epochs
             if epoch % freq_update_target == 0:

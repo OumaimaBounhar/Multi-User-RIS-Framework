@@ -58,7 +58,7 @@ class Parameters :
                     len_path: int = 10,
                     saving_freq_QL: int = 1,
                     test_freq_QL: int = 1,
-                    delta_final: float = 5 * 1e-2, 
+                    delta_min: float = 5 * 1e-2, 
                     len_window_action: int = 1, 
                     len_window_channel: int = 1, 
                     precision: int = 2,  
@@ -109,7 +109,7 @@ class Parameters :
         self.initial_q_value = -len_path 
         self.saving_freq_QL= saving_freq_QL
         self.test_freq_QL = test_freq_QL
-        self.delta_final = delta_final
+        self.delta_min = delta_min
         self.len_window_action = len_window_action
         self.precision = precision
         self.blabla_other_states = blabla_other_states
@@ -185,7 +185,7 @@ class Parameters :
             "epsilon_min": self.epsilon_min,
             "epsilon_decay": self.epsilon_decay,
             "delta_init": self.delta_init,
-            "delta_final": self.delta_final,
+            "delta_min": self.delta_min,
             "delta_decay": self.delta_decay,
             "len_window_action": self.len_window_action,
             "saving_freq": self.saving_freq_QL,
