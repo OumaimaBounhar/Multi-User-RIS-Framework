@@ -1,7 +1,8 @@
 import numpy as np 
 import torch 
 
-def dqn_update_step(
+# Learn function for DQN
+def dqn_learn_update_step(
         eval_net,
         target_net,
         optimizer,
@@ -60,3 +61,18 @@ def dqn_update_step(
         optimizer.step()
 
         return loss.item()
+
+def dqn_soft_update(
+                self,
+                eval_net,
+                target_net,
+                tau,
+):
+        """ 
+        Soft update model parameters
+        θ_target = τ*θ_local + (1 - τ)*θ_target
+        Params
+        =======
+        
+        """
+        
