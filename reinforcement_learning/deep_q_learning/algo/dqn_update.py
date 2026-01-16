@@ -75,4 +75,5 @@ def dqn_soft_update(
         =======
         
         """
-        
+        for target_param, eval_parm in zip(target_net.parameters(), eval_net.parameters()):
+                
