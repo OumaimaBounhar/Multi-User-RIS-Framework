@@ -48,6 +48,7 @@ class Parameters :
                     delta_init: float = 1e-1,
                     delta_decay: float = 1,
                     train_or_test: bool = True,
+                    targetNet_update_method : str = "soft",
                     Train_Deep_Q_Learning: bool = True,
                     saving_freq_DQN: int = 1,
                     test_freq_DQN: int = 1,
@@ -141,10 +142,12 @@ class Parameters :
         self.delta_init = delta_init
         self.delta_decay = delta_decay
         self.train_or_test = train_or_test
+        self.targetNet_update_method = targetNet_update_method
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
         # self.input_dims = input_dims
+        
         
     def get_channels_parameters(self):
         if self.type_channel == "IID":
@@ -223,6 +226,7 @@ class Parameters :
             "delta_init": self.delta_init,
             "delta_decay": self.delta_decay,
             "train_or_test": self.train_or_test,
+            "targetNet_update_method": self.targetNet_update_method,
             "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
             "saving_freq": self.saving_freq_DQN,
             "test_freq": self.test_freq_DQN,

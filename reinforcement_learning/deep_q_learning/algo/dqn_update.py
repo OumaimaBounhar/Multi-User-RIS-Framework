@@ -15,7 +15,7 @@ def dqn_learn_update_step(
         max_norm,
 ):
         """ 
-        One DQN update step.
+        One DQN update step. This function doesn't update the target network, it only computes the Bellman equation to calculate the loss function. 
         
         Works on CPU or GPU depending on where eval_net lives.
         """
@@ -41,7 +41,7 @@ def dqn_learn_update_step(
 
         # Calculate the target Q-values using the bellman equation and target network
         # Gradient calculation is disabled to save memory and speed up the process. 
-        with torch.no_grad:
+        with torch.no_grad():
                 # Compute Q(s,a) from target network without calculating the gradients
                 target_net.eval() 
                 q_values_next = target_net(next_state_tensor)
@@ -62,18 +62,27 @@ def dqn_learn_update_step(
 
         return loss.item()
 
-def dqn_soft_update(
-                self,
+def dqn_target_update(
                 eval_net,
                 target_net,
                 tau,
+                targetNet_update_method,
 ):
         """ 
-        Soft update model parameters
+        Soft update for target model parameters
         θ_target = τ*θ_local + (1 - τ)*θ_target
+        If τ = 1 then it's a hard update.
         Params
         =======
-        
+        eval_net : Evaluation network trained locally from which weights will be copied.
+        target_net : Weights are copied to the frozen Target Network.
+        tau : Interpolation parameter, for e.g. take the value of 1e-3
         """
-        for target_param, eval_parm in zip(target_net.parameters(), eval_net.parameters()):
-                
+        if targetNet_update_method.lower() == "hard":
+                # Hard update
+                target_net.load_state_dict(eval_net.state_dict())
+        elif targetNet_update_method.lower() == "soft":
+                # Soft update
+                with torch.no_grad():
+                        for target_param, eval_param in zip(target_net.parameters(), eval_net.parameters()):
+                                target_param.copy_( tau*eval_param + (1-tau)*target_param ) 

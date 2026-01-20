@@ -1,17 +1,18 @@
 import numpy as np 
 from tqdm import tqdm
-from matplotlib import pyplot as plt 
 
 import os
 import torch
 import torch.nn as nn
 
-from reinforcement_learning.env import Environment 
 from config.parameters import Parameters
-from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_update_step
+from reinforcement_learning.env import Environment 
 from reinforcement_learning.deep_q_learning.components.network import DQN
 from reinforcement_learning.deep_q_learning.components.replay_buffer import ReplayBuffer
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule
+
+from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_learn_update_step, dqn_target_update
+from reinforcement_learning.deep_q_learning.utils import save_model_checkpoints, plot_Convergence, save_Data
 
 
 class DeepQLearningAgent():
@@ -127,6 +128,10 @@ class DeepQLearningAgent():
         n_channels_train = params_dict["n_channels_train"]
         freq_update_target = params_dict["freq_update_target"]
         tau = params_dict["tau"]
+        do_gradient_clipping = params_dict["do_gradient_clipping"]
+        gamma = params_dict["gamma"]
+        targetNet_update_method = params_dict["targetNet_update_method"]
+        max_norm = params_dict["max_norm"]
         
         print(f"Initialize Training for DQN Network on Device : {self.target_q_network.device}")
         
@@ -162,9 +167,6 @@ class DeepQLearningAgent():
                 for time_step in range(n_time_steps):
                     
                     for path in range(max_len_path):
-                        # Choose an action following Epsilon greedy Policy
-                        #current_state = self.environment.state_space.get_state_from_index(current_state_index)
-                        #assert current_state.shape == (self.input_dims ,), f"Current state shape is incorrect: expected ({self.input_dims },), got {current_state.shape}"
                         if train_or_test:
                             index_action = self.choose_action(current_state, epsilon)
                         else:
@@ -211,23 +213,12 @@ class DeepQLearningAgent():
                         current_state_batch, action_batch, reward_batch, next_state_batch = self.replay_buffer.sample_buffer()
                         
                         # Start the training process
-                        loss_value = self.learn(current_state_batch, action_batch, reward_batch, next_state_batch,  params_dict = params_dict)
+                        loss_value = dqn_learn_update_step(self.evaluation_q_network, self.target_q_network, self.optimizer, current_state_batch, action_batch, reward_batch, next_state_batch, gamma, do_gradient_clipping, max_norm )
                         losses.append(loss_value)
                         
             # save the model checkpoints
             if epoch % saving_freq == 0:
-                checkpoint_dir =  self.name + '/checkpoints/'
-                os.makedirs(checkpoint_dir, exist_ok=True)
-                model_path = checkpoint_dir + 'epoch_' + str(epoch) 
-                torch.save(self.evaluation_q_network.state_dict(), model_path + '_eval.pth')
-                torch.save(self.target_q_network.state_dict(), model_path + '_target.pth')
-                print(f'Weights saved in: {model_path}')
-            
-            # if epoch % test_freq == 0:
-            #     # run the test
-            #     self.evaluation_q_network.eval()
-            #     self.test(testing_objects_dict, epoch)
-            #     self.evaluation_q_network.train()
+                save_model_checkpoints()
             
             avg_losses.append(np.mean(losses) if len(losses) > 0 else np.nan)
             avg_len_path.append(np.mean(all_len_path))
@@ -244,126 +235,18 @@ class DeepQLearningAgent():
             
             # Update target network every `target_update_freq` epochs
             if epoch % freq_update_target == 0:
-                # self.target_q_network.load_state_dict(self.evaluation_q_network.state_dict())
-                self.soft_update(self.evaluation_q_network, self.target_q_network, tau) # tau = 1 if not using a soft update
-
-        # print(f'[INFO] Best Score: {max(score_history)}')
+                dqn_target_update(self.evaluation_q_network, self.target_q_network, tau, targetNet_update_method)
         
         torch.save(self.evaluation_q_network.state_dict(), checkpoint_dir + 'last_eval.pth')
         torch.save(self.target_q_network.state_dict(), checkpoint_dir + 'last_target.pth')
         print("[INFO] Deep Q-Learning Training : Process Completed !")
-                
-        #mean_length_path = np.mean(all_len_path)
-        
-        # Extract Policy
-        #states = self.environment.state_space.initialize()
-        #policy = torch.zeros((self.n_states, self.n_actions), dtype= torch.int64).to(self.evaluation_q_network.device)
-        
-        #for idx, state in enumerate(states):
-            #q_values = self.evaluation_q_network(state)
-            #action = torch.argmax(q_values, dim = 1).item()
-            #policy[idx, action] = 1  # Set the corresponding action to 1, indicating it's chosen by the policy
-            
-        #print("Extracted Policy:\n", policy)
 
-        # Save loss values in a CSV file
-        loss_file_path = os.path.join(self.name, "losses.csv")
-        np.savetxt(loss_file_path, avg_losses, delimiter=",", header="Average Loss", comments="")
-        
-        # Save average len path values in a CSV file
-        avg_len_path_file_path = os.path.join(self.name, "avgLenPath.csv")
-        np.savetxt(avg_len_path_file_path, avg_len_path, delimiter=",", header="Average Len Path", comments="")
-
-        # Save exploration rates in a CSV file
-        epsilon_file_path = os.path.join(self.name, "epsilons.csv")
-        np.savetxt(epsilon_file_path, epsilons, delimiter=",", header="Epsilon Values", comments="")
-
-        print(f"[INFO] Losses saved to {loss_file_path}")
-        print(f"[INFO] Epsilon values saved to {epsilon_file_path}")
+        save_Data(self.name, avg_losses, avg_len_path, epsilons)
 
         # Plot the convergence of the algorithm
-        
-        plt.plot(avg_losses, 'b', label='loss')
-        #plt.plot(epsilons, 'r', label='Exploration Rate')
-        plt.title("Convergence of DQN Algorithm loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Average loss")
-        plt.savefig(self.name + "/convergence_deep_q_learning.png")
-        # plt.show()
-        plt.close()
-        
-        plt.plot(avg_len_path, 'b', label='len path')
-        #plt.plot(epsilons, 'r', label='Exploration Rate')
-        plt.title("Convergence of DQN Algorithm number action") 
-        plt.xlabel("Epoch")
-        plt.ylabel("Average len path")
-        plt.savefig(self.name + "/convergence_deep_q_learning_len_path.png")
-        plt.close()
-        
-        Policy = self.evaluation_q_network # The neural network trained is function that outputs the policy
-        ########## Needs to be saved somewhere ##########
+        plot_Convergence(self.name, avg_losses, avg_len_path)
+
+        Policy = self.evaluation_q_network # The NN trained is a function that must find the optimal policy
+
         return Policy
-        #return -mean_length_path, losses
         
-    def soft_update(self, local_model, target_model, tau):
-        """Soft update model parameters.
-        θ_target = τ*θ_local + (1 - τ)*θ_target
-        Params
-        =======
-            local model (PyTorch model): weights will be copied from
-            target model (PyTorch model): weights will be copied to
-            tau (float): interpolation parameter
-        """
-        for target_param, local_param in zip(target_model.parameters(),local_model.parameters()):
-            target_param.data.copy_(tau*local_param.data + (1-tau)*target_param.data)
-            
-def save_model_complexity(model, params_dict, filename="complexity_report.txt"):
-    """Compute and save the model complexity and memory usage."""
-    
-    # Count model parameters
-    n_params = sum(p.numel() for p in model.parameters())
-    mem_MB = n_params * 4 / 1024**2  # FP32 weights
-    mem_MB_total = mem_MB * 3        # include Adam optimizer states (approx)
-    
-    # Compute per-forward and per-batch ops
-    input_dim = params_dict["hidden_layers"]
-    hidden_layers = params_dict["params_list"]
-    batch_size = params_dict["batch_size"]
-    n_actions = params_dict["n_actions"]
-    
-    # Forward FLOPs (mult-adds)
-    ops_forward = input_dim*hidden_layers[0] + sum(hidden_layers[i]*hidden_layers[i+1] for i in range(len(hidden_layers)-1)) + hidden_layers[-1]*n_actions
-    
-    ops_train_step = 4 * ops_forward                # forward + backward + target
-    ops_per_batch = ops_train_step * batch_size
-    
-    # Replay buffer memory (assuming float32)
-    buffer_size = params_dict.get("replay_buffer_memory_size", 80000)
-    buffer_entry = (2 * input_dim + 2)  # (s, s', a, r)
-    buffer_MB = buffer_size * buffer_entry * 4 / 1024**2
-    
-    # Write results
-    report = f"""
-    [MODEL COMPLEXITY REPORT]
-
-    Network architecture: {input_dim} -> {' -> '.join(map(str, hidden_layers))} -> {n_actions}
-    Total parameters: {n_params:,}
-    Model memory (FP32): {mem_MB:.3f} MB
-    Model + optimizer memory (≈×3): {mem_MB_total:.3f} MB
-    Replay buffer: {buffer_size:,} samples × {buffer_entry} floats
-    Replay buffer memory (FP32): {buffer_MB:.3f} MB
-
-    Ops per forward pass: {ops_forward:,}
-    Ops per training sample (≈4×forward): {ops_train_step:,}
-    Ops per batch (batch={batch_size}): {ops_per_batch/1e6:.2f} million
-
-    Total estimated training cost per epoch:
-    ≈ n_time_steps × n_channels_train × max_len_path × ops_per_batch
-    (computed analytically in paper)
-    """
-    
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, "w") as f:
-        f.write(report)
-    
-    print(f"[INFO] Complexity report saved to {filename}")
