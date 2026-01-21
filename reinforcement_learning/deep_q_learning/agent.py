@@ -12,7 +12,7 @@ from reinforcement_learning.deep_q_learning.components.replay_buffer import Repl
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule
 
 from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_learn_update_step, dqn_target_update
-from reinforcement_learning.deep_q_learning.utils import save_model_checkpoints, plot_Convergence, save_Data
+from reinforcement_learning.deep_q_learning.utils import save_model_checkpoints, save_last_models, plot_Convergence, save_Data
 
 
 class DeepQLearningAgent():
@@ -109,7 +109,7 @@ class DeepQLearningAgent():
         if np.random.random() < epsilon :
             action = np.random.randint(self.n_actions)
         else :
-            state_tensor = torch.tensor(state, dtype= torch.float32).to(self.evaluation_q_network.device)
+            state_tensor = torch.as_tensor(state, dtype= torch.float32, device= self.device)
             with torch.no_grad():
                 q_values = self.evaluation_q_network(state_tensor)
                 action = torch.argmax(q_values).item()
@@ -120,127 +120,168 @@ class DeepQLearningAgent():
         
         batch_size = params_dict["batch_size"]
         n_epochs = params_dict["n_epochs"]
+        n_channels_train = params_dict["n_channels_train"]
         n_time_steps = params_dict["n_time_steps"]
         max_len_path = params_dict["max_len_path"]
         train_or_test = params_dict["train_or_test"]
         saving_freq = params_dict["saving_freq"]
         test_freq = params_dict["test_freq"]
-        n_channels_train = params_dict["n_channels_train"]
+        
         freq_update_target = params_dict["freq_update_target"]
         tau = params_dict["tau"]
-        do_gradient_clipping = params_dict["do_gradient_clipping"]
-        gamma = params_dict["gamma"]
         targetNet_update_method = params_dict["targetNet_update_method"]
+
+        gamma = params_dict["gamma"]
         max_norm = params_dict["max_norm"]
-        
-        print(f"Initialize Training for DQN Network on Device : {self.target_q_network.device}")
+        do_gradient_clipping = params_dict["do_gradient_clipping"]
+
+        print(f"Initialize Training for DQN Network on Device : {self.device}")
         
         epsilons = []
         avg_losses = []
         avg_len_path = []
+
+        # Count how many gradients have been performed
+        update_step = 0
+
+        #---------------------------------------- Loop over epochs --------------------------------------------------
+
         for epoch in tqdm(range(n_epochs)):
             
-            all_len_path = []
-            losses = []
+            epoch_path_lengths = []
+            epoch_losses = []
             
-            for channel_realization in range(n_channels_train):
+            #---------------------------------------- Loop over channel realizations --------------------------------------------------
+
+            for _ in range(n_channels_train):
                 
-                current_state = self.environment.state_space.get_state_from_index(0) ## We always start at the Initial State
-                length_path = 0 ## The length of the path we take to be able to measure how efficient the policy is
+                ## Always start from the initial state
+                current_state = self.environment.state_space.get_state_from_index(0) 
                 
                 ## Set the prior at the initial state
                 self.environment.reset_prior()
                 len_window_channel = self.environment.get_len_window_channel()
                 
-                ## Generates a new channel (take it randomly from the dataset given in the environment)
+                # Pick a new channel from dataset 
                 if train_or_test:
+                    # Training : Random channel
                     index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
                     index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
                 else:
-                    ## Test elements in the dataset one after the other
+                    ## Testing : test elements in the dataset one after the other (change, avoid using time_step)
                     index_class_channel = time_step%len(self.dataset_test)
                     index_specific_channel = time_step//len(self.dataset_test)
                     if time_step//len(self.dataset_test) >= len((self.dataset_test)[index_class_channel][1]):
                         index_specific_channel = np.random.randint(0,len((self.dataset_test)[index_class_channel][1]))
+
                 index_channel = (index_class_channel,index_specific_channel)
                 
+                #---------------------------------------- Loop over time steps --------------------------------------------------
+
                 for time_step in range(n_time_steps):
                     
+                    ## Track path length as number of actions are taken to measure how efficient the policy is
+                    path_len = 0 
+                
+                    #---------------------------------------- Loop until reaching the maximum length of path allowed --------------------------------------------------
+
                     for path in range(max_len_path):
+
+                        # Reset the curse of dimension : reset the list of samples and put prior = posterior
+                        if path % len_window_channel == 0:
+                            self.environment.reset_curse_dimension()
+
+                        # Action selection
                         if train_or_test:
                             index_action = self.choose_action(current_state, epsilon)
                         else:
                             index_action = self.choose_action(current_state, 0) ## Greedy Action during the test
                         
-                        # Update the state
-                        ## reset the list of samples and put prior = posterior
-                        if path % len_window_channel == 0:
-                            self.environment.reset_curse_dimension()
-                            
-                        next_state, reward = self.environment.step(index_channel,index_action,train_or_test=train_or_test, model_type = 'DQN')
+                        # Environment step    
+                        next_state, reward = self.environment.step(
+                                                                    index_channel,
+                                                                    index_action,
+                                                                    train_or_test=train_or_test,
+                                                                    model_type = 'DQN'
+                                                                    )
                         
                         # Save the reward
-                        if train_or_test:
-                            length_path += reward
-                        else:
-                            length_path += -1
+                        path_len += 1
                             
-                        # # Store the transition in the Replay Buffer if we train
+                        # Store the transition in the replay buffer training
                         if train_or_test:
                             self.replay_buffer.store_transition(current_state, index_action, reward, next_state)
                             
                         current_state = next_state
                         
-                        # Stop condition in a terminal state
+                        # Stopping condition in a terminal state
                         delta = self.environment.delta
+
                         print(f'delta value in env = {self.environment.get_delta_current()}')
                         print(f'delta value in agent = {delta}')
                         
                         if train_or_test:
-                            #print(current_state)
-                            if max(current_state)>=1-delta:
+                            if max(current_state) >= 1 - delta:
                                 break 
                         else:
                             probability = self.environment.get_posterior()
-                            if max(probability)>=1-delta:
+                            if max(probability) >= 1 - delta:
                                 break
                             
-                    all_len_path.append(1-length_path)
+                    epoch_path_lengths.append(path_len)
                     
-                    #print(self.replay_buffer.memory_counter)
+                    #------------------- Learning step (only if the buffer has enough samples) ------------------
                     if self.replay_buffer.memory_counter >= batch_size:
                         # Sample a batch from the Replay Buffer
                         current_state_batch, action_batch, reward_batch, next_state_batch = self.replay_buffer.sample_buffer()
                         
                         # Start the training process
-                        loss_value = dqn_learn_update_step(self.evaluation_q_network, self.target_q_network, self.optimizer, current_state_batch, action_batch, reward_batch, next_state_batch, gamma, do_gradient_clipping, max_norm )
-                        losses.append(loss_value)
-                        
-            # save the model checkpoints
-            if epoch % saving_freq == 0:
-                save_model_checkpoints()
-            
-            avg_losses.append(np.mean(losses) if len(losses) > 0 else np.nan)
-            avg_len_path.append(np.mean(all_len_path))
-            
-            tqdm.write(f"Epoch {epoch}: Loss = {np.mean(losses):.6f}, Avg Path = {np.mean(all_len_path):.2f}, Epsilon = {epsilon:.3f}")
+                        loss_value = dqn_learn_update_step(
+                                                            self.evaluation_q_network,
+                                                            self.target_q_network,
+                                                            self.optimizer, 
+                                                            current_state_batch, 
+                                                            action_batch, 
+                                                            reward_batch, 
+                                                            next_state_batch, 
+                                                            gamma, 
+                                                            do_gradient_clipping, 
+                                                            max_norm )
+                        epoch_losses.append(loss_value)
 
-            # update the epsilon value
+                        #------------------- Target network update (frequency in gradient steps) ------------------
+                        if update_step % freq_update_target == 0:
+                            dqn_target_update(
+                                                self.evaluation_q_network, 
+                                                self.target_q_network, 
+                                                tau, 
+                                                targetNet_update_method
+                                                )
+            
+            avg_losses.append(np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan)
+            avg_len_path.append(np.mean(epoch_path_lengths))
+
+            tqdm.write(f"Epoch {epoch}: Loss = {np.mean(epoch_losses):.6f}, Avg Path = {np.mean(epoch_path_lengths):.2f}, Epsilon = {epsilon:.3f}")
+
+            # Update the Epsilon value
             epsilons.append(epsilon)
             epsilon = epsilon.step()
             
-            # Update delta
+            # Update Delta
             self.environment.delta = self.delta_schedule.step()
             print(f'[INFO] Delta value : f{delta}')
-            
-            # Update target network every `target_update_freq` epochs
-            if epoch % freq_update_target == 0:
-                dqn_target_update(self.evaluation_q_network, self.target_q_network, tau, targetNet_update_method)
         
-        torch.save(self.evaluation_q_network.state_dict(), checkpoint_dir + 'last_eval.pth')
-        torch.save(self.target_q_network.state_dict(), checkpoint_dir + 'last_target.pth')
-        print("[INFO] Deep Q-Learning Training : Process Completed !")
+        # save the model checkpoints
+        if epoch % saving_freq == 0:
+            save_model_checkpoints(self.name, epoch, self.evaluation_q_network, self.target_q_network)
 
+        save_last_models(
+                            self.name, 
+                            self.evaluation_q_network, 
+                            self.target_q_network
+                            )
+
+        # Save the records of average losses, length of path and epsilon
         save_Data(self.name, avg_losses, avg_len_path, epsilons)
 
         # Plot the convergence of the algorithm

@@ -11,12 +11,30 @@ def save_model_checkpoints(
                             eval_net, 
                             target_net
 ):
-    checkpoint_dir =  name + '/checkpoints/'
-    os.makedirs(checkpoint_dir, exist_ok=True)
+    # Create path
+    checkpoint_dir =  os.path.join(name, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok = True)
+    
     model_path = checkpoint_dir + 'epoch_' + str(epoch) 
+
+    # Save models of the Evaluation and Target Network
     torch.save(eval_net.state_dict(), model_path + '_eval.pth')
     torch.save(target_net.state_dict(), model_path + '_target.pth')
     print(f'Weights saved in: {model_path}')
+
+def save_last_models(
+                        name,
+                        eval_net,
+                        target_net
+):
+    # Create path 
+    checkpoint_dir = os.path.join(name, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok = True)
+
+    # Save last models of the Evaluation and Target Network
+    torch.save(eval_net.state_dict(), os.path.join(checkpoint_dir, "last_eval.pth"))
+    torch.save(target_net.state_dict(), os.path.join(checkpoint_dir, "last_target.pth"))
+    print("[INFO] Deep Q-Learning Training : Process Completed !")
 
 #---------------------------------------- Visualization  ------------------------------------------------------------------------------
 
