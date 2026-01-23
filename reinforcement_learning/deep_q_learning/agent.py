@@ -37,10 +37,10 @@ class DeepQLearningAgent():
         learning_rate = params_dict["learning_rate_init"]
         batch_size = params_dict["batch_size"]
         replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
-        epsilon_init = params_dict["epsilon_init"],
+        epsilon_init = params_dict["epsilon_init"]
         epsilon_decay = params_dict["epsilon_decay"]
         epsilon_min = params_dict["epsilon_min"]
-        delta_init = params_dict["delta_init"],
+        delta_init = params_dict["delta_init"]
         delta_decay = params_dict["delta_decay"]
         delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
 
@@ -93,18 +93,12 @@ class DeepQLearningAgent():
                                                             decay = delta_decay,
                                                             min_value = delta_min
                                                             )
-        
-        # Initialization of delta value controlled by the environment for the stopping criteria
-        self.environment.delta = self.delta_schedule.get()
 
         # ---- Policy  ----
         self.policy = np.zeros([self.n_states, self.n_actions])
         
-    def choose_action(self, state):
+    def choose_action(self, state, epsilon: float):
         """ Choose an action following the Epsilon Greedy Policy"""
-
-        # Initialization of epsilon value
-        epsilon = self.epsilon_schedule.get()
 
         if np.random.random() < epsilon :
             action = np.random.randint(self.n_actions)
@@ -115,17 +109,27 @@ class DeepQLearningAgent():
                 action = torch.argmax(q_values).item()
         return action
     
-    def train(self, params_dict = {}, testing_objects_dict = {}):
-        """" Train the Deep Q-Learning Network """
-        
+    def train_one_epoch(self, epsilon: float, delta: float, params_dict={}):
+        """ 
+        Run one training epoch
+        =======
+        Args:
+        =======
+        @ epsilon : for the Epsilon Greedy Policy
+        @ delta: for the stopping criteria
+        @ params_dict: access to dictionary for needed parameters
+
+        Returns:
+        @ avg_loss : the average of the loss during the training
+        @ avg_len_path : the average length of path after all the channel realization
+        @ n_updates : the amount of times the Target Network has been updated """
+
         batch_size = params_dict["batch_size"]
-        n_epochs = params_dict["n_epochs"]
+        
         n_channels_train = params_dict["n_channels_train"]
         n_time_steps = params_dict["n_time_steps"]
         max_len_path = params_dict["max_len_path"]
         train_or_test = params_dict["train_or_test"]
-        saving_freq = params_dict["saving_freq"]
-        test_freq = params_dict["test_freq"]
         
         freq_update_target = params_dict["freq_update_target"]
         tau = params_dict["tau"]
@@ -134,26 +138,21 @@ class DeepQLearningAgent():
         gamma = params_dict["gamma"]
         max_norm = params_dict["max_norm"]
         do_gradient_clipping = params_dict["do_gradient_clipping"]
-
-        print(f"Initialize Training for DQN Network on Device : {self.device}")
         
-        epsilons = []
-        avg_losses = []
-        avg_len_path = []
+        epoch_losses = []
+        epoch_path_lengths = []
 
         # Count how many gradients have been performed
         update_step = 0
 
-        #---------------------------------------- Loop over epochs --------------------------------------------------
+        # Ensure the environment uses the right delta
+        self.environment.set_delta_current(delta) 
 
-        for epoch in tqdm(range(n_epochs)):
-            
-            epoch_path_lengths = []
-            epoch_losses = []
-            
-            #---------------------------------------- Loop over channel realizations --------------------------------------------------
+        print(f"Value of delta in the environment :  delta = {self.environment.get_delta_current}")
 
-            for _ in range(n_channels_train):
+        #---------------------------------------- Loop over channel realizations --------------------------------------------------
+
+        for channel_realization in range(n_channels_train):
                 
                 ## Always start from the initial state
                 current_state = self.environment.state_space.get_state_from_index(0) 
@@ -168,17 +167,17 @@ class DeepQLearningAgent():
                     index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
                     index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
                 else:
-                    ## Testing : test elements in the dataset one after the other (change, avoid using time_step)
-                    index_class_channel = time_step%len(self.dataset_test)
-                    index_specific_channel = time_step//len(self.dataset_test)
-                    if time_step//len(self.dataset_test) >= len((self.dataset_test)[index_class_channel][1]):
+                    ## Testing : test elements in the dataset one after the other (???????????? I don't understand this part)
+                    index_class_channel = channel_realization%len(self.dataset_test)
+                    index_specific_channel = channel_realization//len(self.dataset_test)
+                    if channel_realization//len(self.dataset_test) >= len((self.dataset_test)[index_class_channel][1]):
                         index_specific_channel = np.random.randint(0,len((self.dataset_test)[index_class_channel][1]))
 
                 index_channel = (index_class_channel,index_specific_channel)
-                
+
                 #---------------------------------------- Loop over time steps --------------------------------------------------
 
-                for time_step in range(n_time_steps):
+                for _ in range(n_time_steps):
                     
                     ## Track path length as number of actions are taken to measure how efficient the policy is
                     path_len = 0 
@@ -195,7 +194,7 @@ class DeepQLearningAgent():
                         if train_or_test:
                             index_action = self.choose_action(current_state, epsilon)
                         else:
-                            index_action = self.choose_action(current_state, 0) ## Greedy Action during the test
+                            index_action = self.choose_action(current_state, 0.0) ## Greedy Action during the test
                         
                         # Environment step    
                         next_state, reward = self.environment.step(
@@ -214,20 +213,17 @@ class DeepQLearningAgent():
                             
                         current_state = next_state
                         
-                        # Stopping condition in a terminal state
-                        delta = self.environment.delta
-
-                        print(f'delta value in env = {self.environment.get_delta_current()}')
-                        print(f'delta value in agent = {delta}')
-                        
+                        delta_current = self.environment.get_delta_current()
                         if train_or_test:
-                            if max(current_state) >= 1 - delta:
+                            if max(current_state) >= 1 - delta_current:
                                 break 
                         else:
-                            probability = self.environment.get_posterior()
-                            if max(probability) >= 1 - delta:
+                            if max(self.environment.get_posterior()) >= 1 - delta_current:
                                 break
-                            
+                        
+                        print(f'Delta value in env = {self.environment.get_delta_current()}')
+                        print(f'Delta value in agent = {delta}')
+
                     epoch_path_lengths.append(path_len)
                     
                     #------------------- Learning step (only if the buffer has enough samples) ------------------
@@ -249,6 +245,8 @@ class DeepQLearningAgent():
                                                             max_norm )
                         epoch_losses.append(loss_value)
 
+                        update_step += 1
+
                         #------------------- Target network update (frequency in gradient steps) ------------------
                         if update_step % freq_update_target == 0:
                             dqn_target_update(
@@ -257,19 +255,65 @@ class DeepQLearningAgent():
                                                 tau, 
                                                 targetNet_update_method
                                                 )
+        return {
+            "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
+            "avg_len_path" : np.mean(epoch_path_lengths),
+            "n_updates": update_step
+        }
+                
+    
+    def train(self, params_dict = {}, testing_objects_dict = {}):
+        """" Train the Deep Q-Learning Network """
+        
+        n_epochs = params_dict["n_epochs"]
+        saving_freq = params_dict["saving_freq"]
+
+        # Reset the values of epsilon and delta
+        self.epsilon_schedule.reset()
+        self.delta_schedule.reset()
+
+        epsilon = self.epsilon_schedule.get()
+        delta = self.delta_schedule.get()
+        print(f"Initialization of epsilon and delta schedules : epsilon_init = {epsilon} delta_init = {delta}")
+
+        print(f"Initialize Training for DQN Network on Device : {self.device}")
+        
+        avg_losses = []
+        avg_len_path = []
+        epsilons = []
+
+        #---------------------------------------- Loop over epochs --------------------------------------------------
+
+        for epoch in tqdm(range(n_epochs)):
             
-            avg_losses.append(np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan)
-            avg_len_path.append(np.mean(epoch_path_lengths))
-
-            tqdm.write(f"Epoch {epoch}: Loss = {np.mean(epoch_losses):.6f}, Avg Path = {np.mean(epoch_path_lengths):.2f}, Epsilon = {epsilon:.3f}")
-
-            # Update the Epsilon value
+            one_epoch_metrics = self.train_one_epoch(
+                                                        epsilon= epsilon,
+                                                        delta= delta,
+                                                        params_dict= params_dict
+                                                    )
+            
+            avg_losses.append(one_epoch_metrics["avg_loss"])
+            avg_len_path.append(one_epoch_metrics["avg_len_path"])
             epsilons.append(epsilon)
-            epsilon = epsilon.step()
+
+            tqdm.write(
+                        f"Epoch {epoch}:" 
+                        f"Loss = {one_epoch_metrics["avg_loss"]:.6f}, "
+                        f"Avg Path = {one_epoch_metrics["avg_len_path"]:.2f}, "
+                        f"Epsilon = {epsilon:.3f}, "
+                        f"Delta = {delta: .4e}"
+                    )
+
+            # Update Epsilon and Delta values in the agent
+            epsilon = self.epsilon_schedule.step()
+            delta = self.delta_schedule.step()
             
-            # Update Delta
-            self.environment.delta = self.delta_schedule.step()
-            print(f'[INFO] Delta value : f{delta}')
+            # Update Delta value in the environment
+            self.environment.set_delta_current(delta)
+
+            print(f'[INFO] Epsilon value updated : {epsilon}')
+            print(f'[INFO] Delta value updated in agent : {delta}')
+            print(f'[INFO] Delta value updated in environment : {self.environment.get_delta_current()}')
         
         # save the model checkpoints
         if epoch % saving_freq == 0:
@@ -287,7 +331,6 @@ class DeepQLearningAgent():
         # Plot the convergence of the algorithm
         plot_Convergence(self.name, avg_losses, avg_len_path)
 
-        Policy = self.evaluation_q_network # The NN trained is a function that must find the optimal policy
-
-        return Policy
+        # The NN trained is a function that must find the optimal policy
+        return self.evaluation_q_network
         

@@ -72,11 +72,12 @@ def dqn_target_update(
         Soft update for target model parameters
         θ_target = τ*θ_local + (1 - τ)*θ_target
         If τ = 1 then it's a hard update.
-        Params
         =======
-        eval_net : Evaluation network trained locally from which weights will be copied.
-        target_net : Weights are copied to the frozen Target Network.
-        tau : Interpolation parameter, for e.g. take the value of 1e-3
+        Args:
+        =======
+        @ eval_net : Evaluation network trained locally from which weights will be copied.
+        @ target_net : Weights are copied to the frozen Target Network.
+        @ tau : Interpolation parameter, for e.g. take the value of 1e-3
         """
         if targetNet_update_method.lower() == "hard":
                 # Hard update

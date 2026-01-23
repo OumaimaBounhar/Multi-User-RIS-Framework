@@ -42,7 +42,7 @@ class Parameters :
                     freq_update_target: int = 2,
                     tau: float = 0.05,
                     max_len_path: int = 20,
-                    epsilon: float = 1,
+                    epsilon_init: float = 1,
                     epsilon_decay: float = 0.999,
                     epsilon_min: float = 0.01,
                     delta_init: float = 1e-1,
@@ -76,13 +76,16 @@ class Parameters :
         self.N_R = N_R # Number antennas at the Receiver
         self.N_T = N_T # Number antennas at the Transmitter
         self.N_RIS = N_RIS  # Number Reflective elements at the RIS
+        
         self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
         self.modification_channel = modification_channel
         self.type_channel = type_channel
         self.len_window_channel = len_window_channel
+        
         if type_channel == "IID":
             self.mean_channel = mean_channel
             self.std_channel = std_channel
+        
         if type_channel == "half-spaced ULAs":
             self.paths = [1,1,0] # Number of paths for the link Transmitter-RIS, RIS-Receiver, Transmitter-Receiver
             # self.paths = [2,2,0] # Ex 53
@@ -102,47 +105,58 @@ class Parameters :
         self.type_codebooks = type_codebooks # Communication / Pilots
         
         ### For Q-Learning parameters ###
-        self.Train_Q_Learning = Train_Q_Learning
         self.n_episodes = n_episodes
-        self.len_path = len_path
         self.n_channels_train_QL = n_channels_train_QL
         self.n_time_steps_ql = n_time_steps_ql
+        self.len_path = len_path
+
         self.initial_q_value = -len_path 
+        
+        self.learning_rate_decay = learning_rate_decay
+        self.learning_rate_min = learning_rate_min
+
+        self.len_window_action = len_window_action
+        self.Train_Q_Learning = Train_Q_Learning
         self.saving_freq_QL= saving_freq_QL
         self.test_freq_QL = test_freq_QL
-        self.delta_min = delta_min
-        self.len_window_action = len_window_action
+        
         self.precision = precision
         self.blabla_other_states = blabla_other_states
         self.min_representatives_q_learning_train = min_representatives_q_learning_train
         self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0] 
         self.min_representatives_q_learning_test = min_representatives_q_learning_test
         self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0] 
-        self.learning_rate_decay = learning_rate_decay
-        self.learning_rate_min = learning_rate_min
+
         
         ### For DQN Parameters ###
-        self.gamma = gamma
-        self.learning_rate_init = learning_rate_init
         self.params_list = params_list
+        self.loss_fct = loss_fct
         self.batch_size = batch_size
         self.replay_buffer_memory_size = replay_buffer_memory_size
-        self.max_norm=max_norm
-        self.do_gradient_clipping = do_gradient_clipping
-        self.loss_fct = loss_fct
+
         self.n_epochs = n_epochs
-        self.n_time_steps_dqn = n_time_steps_dqn
         self.n_channels_train_DQN = n_channels_train_DQN
-        self.freq_update_target = freq_update_target
-        self.tau = tau
+        self.n_time_steps_dqn = n_time_steps_dqn
         self.max_len_path = max_len_path
-        self.epsilon = epsilon
+
+        self.gamma = gamma
+        self.learning_rate_init = learning_rate_init
+
+        self.epsilon_init = epsilon_init
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
         self.delta_init = delta_init
         self.delta_decay = delta_decay
-        self.train_or_test = train_or_test
+        self.delta_min = delta_min
+        
+        self.max_norm=max_norm
+        self.do_gradient_clipping = do_gradient_clipping
+
+        self.tau = tau
+        self.freq_update_target = freq_update_target
         self.targetNet_update_method = targetNet_update_method
+
+        self.train_or_test = train_or_test
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
@@ -178,33 +192,41 @@ class Parameters :
     
     def get_q_learning_parameters(self):
         return {
-            "gamma": self.gamma,
+            
             "n_episodes": self.n_episodes,
-            "len_path": self.len_path,
+            "n_channels_train": self.n_channels_train_QL,
             "n_time_steps": self.n_time_steps_ql,
+            "len_path": self.len_path,
+
+            "SNR" : self.SNR,
+            "snr_values": self.snr_values,
+            "size_codebooks" :self.size_codebooks,
             "initial_q_value": self.initial_q_value,
+
             "learning_rate_init": self.learning_rate_init,
-            "epsilon" : self.epsilon,
-            "epsilon_min": self.epsilon_min,
+            "learning_rate_decay": self.learning_rate_decay,
+            "learning_rate_min": self.learning_rate_min,
+
+            "gamma": self.gamma,
+
+            "epsilon_init" : self.epsilon_init,
             "epsilon_decay": self.epsilon_decay,
+            "epsilon_min": self.epsilon_min,
+
             "delta_init": self.delta_init,
-            "delta_min": self.delta_min,
             "delta_decay": self.delta_decay,
+            "delta_min": self.delta_min,
+
             "len_window_action": self.len_window_action,
             "saving_freq": self.saving_freq_QL,
             "test_freq": self.test_freq_QL,
+
             "precision": self.precision,
             "blabla_other_states": self.blabla_other_states,
             "min_representatives_q_learning_train": self.min_representatives_q_learning_train,
             "max_samples_q_learning_train": self.max_samples_q_learning_train,
             "min_representatives_q_learning_test": self.min_representatives_q_learning_test,
             "max_samples_q_learning_test": self.max_samples_q_learning_test,
-            "n_channels_train": self.n_channels_train_QL,
-            "learning_rate_decay": self.learning_rate_decay,
-            "learning_rate_min": self.learning_rate_min,
-            "snr_values": self.snr_values,
-            "SNR" : self.SNR,
-            "size_codebooks" :self.size_codebooks,
         }
     
     def get_dqn_parameters(self):
@@ -220,11 +242,12 @@ class Parameters :
             "freq_update_target": self.freq_update_target,
             "tau": self.tau,
             "max_len_path": self.max_len_path,
-            "epsilon": self.epsilon,
+            "epsilon_init": self.epsilon_init,
             "epsilon_decay": self.epsilon_decay,
             "epsilon_min": self.epsilon_min,
             "delta_init": self.delta_init,
             "delta_decay": self.delta_decay,
+            "delta_min": self.delta_min,
             "train_or_test": self.train_or_test,
             "targetNet_update_method": self.targetNet_update_method,
             "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
