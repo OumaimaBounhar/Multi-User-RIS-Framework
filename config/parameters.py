@@ -39,7 +39,7 @@ class Parameters :
                     n_epochs: int = 10000,
                     n_time_steps_dqn: int = 200,
                     n_channels_train_DQN: int = 10,
-                    freq_update_target: int = 2,
+                    freq_update_target: int = 1000,
                     tau: float = 0.05,
                     max_len_path: int = 20,
                     epsilon_init: float = 1,

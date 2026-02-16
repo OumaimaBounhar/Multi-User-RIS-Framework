@@ -59,6 +59,9 @@ class Environment():
         ---------
             closest_state_index : The next state index
             reward : The reward
+            terminated : bool (task solved)
+            truncated : bool (time/budget limit reached) -> handled outside if env doesn't track steps
+            info : dict (debug metrics only)
         """
         ## Feedback for a channel stored in the dataset
         index_class_channel,index_specific_channel = index_channel
@@ -80,14 +83,21 @@ class Environment():
         self.posterior = posterior
         
         closest_state_index:int = -1
+
         if model_type.upper() == 'QL':
+
             ## Find the closest state to the posterior probability
             min_distance = float('inf')
+
             for next_state_index in range(self.state_space.get_n_states()):
+
                 next_state = self.state_space.get_state_from_index(next_state_index)
+
                 ## Calculate the distance between posterior and the next state
                 distance = float(np.linalg.norm(posterior - next_state))
+
                 if distance < min_distance:
+
                     min_distance = distance
                     closest_state_index = next_state_index
             
@@ -95,48 +105,34 @@ class Environment():
             
             if max(next_state)>=1-self.delta:
                 reward = 0
-            #if next_state[index_class_channel]>= 1-self.delta:
-                #reward = 0
+
             else : 
                 reward = -1
             
-            return closest_state_index, reward
-        
+            info = {
+                "delta" : self.delta,
+                "confidence" : max(posterior),
+                "chosen_action" : np.argmax(posterior),
+                "distance" : float(min_distance)
+            }
+            
+            return closest_state_index, reward, info
+
         if model_type.upper() == 'DQN':
-            if max(posterior)>=1-self.delta:
-                reward = 0
-            #if next_state[index_class_channel]>= 1-self.delta:
-                #reward = 0
-            else : 
-                reward = -1
-            return posterior, reward
-            
-            ## Find the closest state to the posterior probability
-            #min_distance = float('inf')
-            #for next_state_index in range(self.state_space.get_n_states()):
-                #next_state = self.state_space.get_state_from_index(next_state_index)
-                ## Calculate the distance between posterior and the next state
-                #distance = float(np.linalg.norm(posterior - next_state))
-                #if distance < min_distance:
-                    #min_distance = distance
-                    #closest_state_index = next_state_index
-            
-            #next_state = self.state_space.get_state_from_index(closest_state_index)
-            
-            #return closest_state_index, reward
-        
-        
-        ## Stopping condition at a terminal state
-        ## Terminal state is index_class_channel+1 (1 is for the initial state see the way State is defined)
-        ## terminal_state = self.state_space.get_state_from_index(index_class_channel+1)
-        
-            
-        #print(self.prior)
-        #print(posterior)
-        #print(next_state)
-        #print(terminal_state)
-        #self.prior = posterior ## Stores the new probability
-        #self.ordered_list = new_ordered_list
+            delta = self.get_delta_current()
+            confidence = float(np.max(posterior))
+            terminated = (confidence >= 1.0 - float(delta))
+            truncated = False # Will be set in the agent when we hit max steps
+            reward = 0 if terminated else -1
+
+            info = {
+                "delta" : delta,
+                "confidence" : confidence,
+                "chosen_action" : np.argmax(posterior), 
+                "success": bool(terminated)
+            }
+
+            return posterior, reward, terminated, truncated, info
 
     def get_len_window_action(self):
         return self.len_window_action
@@ -164,4 +160,3 @@ class Environment():
     
     def get_size_codebook(self):
         return self.parameters.get_codebook_parameters()[0]
-     

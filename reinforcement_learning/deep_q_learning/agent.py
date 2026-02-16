@@ -43,6 +43,9 @@ class DeepQLearningAgent():
         delta_init = params_dict["delta_init"]
         delta_decay = params_dict["delta_decay"]
         delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
+        targetNet_update_method = params_dict["targetNet_update_method"]
+        
+        self.update_step = 0 # Count how many gradients have been performed
 
         # ---- Dataset ----
         self.dataset_train,self.dataset_test = environment.get_dataset()
@@ -109,7 +112,7 @@ class DeepQLearningAgent():
                 action = torch.argmax(q_values).item()
         return action
     
-    def train_one_epoch(self, epsilon: float, delta: float, params_dict={}):
+    def train_one_epoch(self, epsilon: float, params_dict={}):
         """ 
         Run one training epoch
         =======
@@ -141,14 +144,6 @@ class DeepQLearningAgent():
         
         epoch_losses = []
         epoch_path_lengths = []
-
-        # Count how many gradients have been performed
-        update_step = 0
-
-        # Ensure the environment uses the right delta
-        self.environment.set_delta_current(delta) 
-
-        print(f"Value of delta in the environment :  delta = {self.environment.get_delta_current}")
 
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
 
@@ -197,39 +192,36 @@ class DeepQLearningAgent():
                             index_action = self.choose_action(current_state, 0.0) ## Greedy Action during the test
                         
                         # Environment step    
-                        next_state, reward = self.environment.step(
-                                                                    index_channel,
-                                                                    index_action,
-                                                                    train_or_test=train_or_test,
-                                                                    model_type = 'DQN'
-                                                                    )
+                        next_state, reward, terminated, truncated, info = self.environment.step(
+                                                                                                index_channel,
+                                                                                                index_action,
+                                                                                                train_or_test=train_or_test,
+                                                                                                model_type = 'DQN'
+                                                                                                )
                         
                         # Save the reward
                         path_len += 1
+
+                        # Setting the Gymnasium-style step.
+                        time_limit_reached = (path == max_len_path - 1)
+                        truncated = (time_limit_reached and not terminated)
+
+                        done = terminated or truncated
                             
                         # Store the transition in the replay buffer training
                         if train_or_test:
-                            self.replay_buffer.store_transition(current_state, index_action, reward, next_state)
+                            self.replay_buffer.store_transition(current_state, index_action, reward, next_state, done)
                             
                         current_state = next_state
-                        
-                        delta_current = self.environment.get_delta_current()
-                        if train_or_test:
-                            if max(current_state) >= 1 - delta_current:
-                                break 
-                        else:
-                            if max(self.environment.get_posterior()) >= 1 - delta_current:
-                                break
-                        
-                        print(f'Delta value in env = {self.environment.get_delta_current()}')
-                        print(f'Delta value in agent = {delta}')
+                        if done:
+                            break
 
                     epoch_path_lengths.append(path_len)
                     
                     #------------------- Learning step (only if the buffer has enough samples) ------------------
                     if self.replay_buffer.memory_counter >= batch_size:
                         # Sample a batch from the Replay Buffer
-                        current_state_batch, action_batch, reward_batch, next_state_batch = self.replay_buffer.sample_buffer()
+                        current_state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.replay_buffer.sample_buffer()
                         
                         # Start the training process
                         loss_value = dqn_learn_update_step(
@@ -239,26 +231,37 @@ class DeepQLearningAgent():
                                                             current_state_batch, 
                                                             action_batch, 
                                                             reward_batch, 
-                                                            next_state_batch, 
+                                                            next_state_batch,
+                                                            done_batch,
                                                             gamma, 
                                                             do_gradient_clipping, 
                                                             max_norm )
                         epoch_losses.append(loss_value)
 
-                        update_step += 1
+                        self.update_step += 1
 
                         #------------------- Target network update (frequency in gradient steps) ------------------
-                        if update_step % freq_update_target == 0:
+                        if targetNet_update_method.lower() == "soft": 
+                            # tau is typically small : 1e-3 to 5e-3 (sometimes 1e-2). Soft update is already “gentle”. Doing it every step is standard and stable.
                             dqn_target_update(
                                                 self.evaluation_q_network, 
                                                 self.target_q_network, 
                                                 tau, 
                                                 targetNet_update_method
                                                 )
+
+                        if targetNet_update_method.lower() == "hard": 
+                            if self.update_step % freq_update_target == 0:
+                                dqn_target_update(
+                                                    self.evaluation_q_network, 
+                                                    self.target_q_network, 
+                                                    tau, 
+                                                    targetNet_update_method
+                                                )
         return {
             "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
             "avg_len_path" : np.mean(epoch_path_lengths),
-            "n_updates": update_step
+            "n_updates": self.update_step
         }
                 
     
@@ -288,7 +291,6 @@ class DeepQLearningAgent():
             
             one_epoch_metrics = self.train_one_epoch(
                                                         epsilon= epsilon,
-                                                        delta= delta,
                                                         params_dict= params_dict
                                                     )
             
@@ -304,6 +306,10 @@ class DeepQLearningAgent():
                         f"Delta = {delta: .4e}"
                     )
 
+            print(f'[INFO] Value of epsilon in the agent before the update:  epsilon = {epsilon}')
+            print(f'[INFO] Value of delta in the agent before the update:  delta_agent = {delta}')
+            print(f'[INFO] Value of delta in the environment before the update:  delta_env = {self.environment.get_delta_current()}')
+
             # Update Epsilon and Delta values in the agent
             epsilon = self.epsilon_schedule.step()
             delta = self.delta_schedule.step()
@@ -312,8 +318,8 @@ class DeepQLearningAgent():
             self.environment.set_delta_current(delta)
 
             print(f'[INFO] Epsilon value updated : {epsilon}')
-            print(f'[INFO] Delta value updated in agent : {delta}')
-            print(f'[INFO] Delta value updated in environment : {self.environment.get_delta_current()}')
+            print(f'[INFO] Delta value updated in agent : delta_agent = {delta}')
+            print(f'[INFO] Delta value updated in environment : delta_env = {self.environment.get_delta_current()}')
         
         # save the model checkpoints
         if epoch % saving_freq == 0:

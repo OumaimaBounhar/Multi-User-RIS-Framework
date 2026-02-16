@@ -10,6 +10,7 @@ def dqn_learn_update_step(
         action_batch,
         reward_batch,
         next_state_batch,
+        done_batch,
         gamma,
         do_gradient_clipping,
         max_norm,
@@ -34,6 +35,8 @@ def dqn_learn_update_step(
 
         rewards_tensor = torch.as_tensor(reward_batch, dtype= torch.float32, device= device).view(-1) #Even if rewards only take 0 or -1 a values, they are input to a continuous function, NN operates in floats, the update of the target would return an error if the reward is an integer.
 
+        done_tensor = torch.as_tensor(done_batch, dtype= torch.float32, device= device).view(-1)
+
         # Calculate Q(s,a) from evaluation network
         eval_net.train()
         q_values_current = eval_net(current_state_tensor)  # shape (B, n_actions)
@@ -46,7 +49,8 @@ def dqn_learn_update_step(
                 target_net.eval() 
                 q_values_next = target_net(next_state_tensor)
                 max_q_values_next = q_values_next.max(dim=1)[0]
-                target_q_values = rewards_tensor + gamma * max_q_values_next
+                bootstrap_mask = 1 - done_tensor
+                target_q_values = rewards_tensor + gamma * bootstrap_mask * max_q_values_next
 
         # Calculate the loss between the predicted and target Q-values
         loss = eval_net.loss_fct(selected_q_values, target_q_values)
