@@ -101,8 +101,17 @@ class DeepQLearningAgent():
         self.policy = np.zeros([self.n_states, self.n_actions])
         
     def choose_action(self, state, epsilon: float):
-        """ Choose an action following the Epsilon Greedy Policy"""
+        """
+        Choose an action following Epsilon Greedy Policy.
+        =======
+        Args:
+        =======
+        @ state : The array/tensor of the current state
+        @ epsilon : Epsilon schedule
 
+        Returns:
+        The index of the action to choose next
+        """
         if np.random.random() < epsilon :
             action = np.random.randint(self.n_actions)
         else :
@@ -125,8 +134,8 @@ class DeepQLearningAgent():
         Returns:
         @ avg_loss : the average of the loss during the training
         @ avg_len_path : the average length of path after all the channel realization
-        @ n_updates : the amount of times the Target Network has been updated """
-
+        @ n_updates : the amount of times the Target Network has been updated 
+        """
         batch_size = params_dict["batch_size"]
         
         n_channels_train = params_dict["n_channels_train"]
@@ -266,8 +275,9 @@ class DeepQLearningAgent():
                 
     
     def train(self, params_dict = {}, testing_objects_dict = {}):
-        """" Train the Deep Q-Learning Network """
-        
+        """" 
+        Train the Deep Q-Learning Network 
+        """
         n_epochs = params_dict["n_epochs"]
         saving_freq = params_dict["saving_freq"]
 

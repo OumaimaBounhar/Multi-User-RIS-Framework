@@ -1,8 +1,11 @@
 import os
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
 
-def computes_percentage_unvisited_states(self) -> float:
+#---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
+
+def computes_percentage_unvisited_states() -> float:
     """Computes the percentage of unvisited states in the Q-matrix.
 
     Returns:
@@ -14,7 +17,24 @@ def computes_percentage_unvisited_states(self) -> float:
     percentage_unvisited_states = 100 * number_of_unvisited_states / self.Q_matrix.size
     return percentage_unvisited_states
 
-def save_Q_matrix(self, episode: int,name:str) -> None:
+#---------------------------------------- Visualization  ------------------------------------------------------------------------------
+
+def plot_Convergence(name, smoothed_avg_len):
+    """Plot the convergence of the Q-Learning Algorithm
+
+    Args:
+        name (_type_): _description_
+        smoothed_avg_len (_type_): _description_
+    """
+    plt.plot(smoothed_avg_len)
+    plt.title("Convergence of Q-Learning Algorithm")
+    plt.xlabel("Iteration")
+    plt.ylabel("Average Len path normalized with a window size = 10")
+    plt.savefig(name + "/convergence_q_learning_train.png")
+
+#---------------------------------------- Reporting ------------------------------------------------------------------------------
+
+def save_Q_matrix(episode: int,name:str) -> None:
     """" Saves the Q-Learning matrix in a csv file
     Args : 
         episode : The index of the episode
@@ -30,7 +50,7 @@ def save_Q_matrix(self, episode: int,name:str) -> None:
     
     print(f"[INFO] Q-matrix saved to {filename}")
     
-def save_policy(self, episode: int,name:str) -> None:
+def save_policy(episode: int,name:str) -> None:
     """" Saves the Q-Learning matrix in a csv file
     Args : 
         episode : The index of the episode
@@ -42,7 +62,7 @@ def save_policy(self, episode: int,name:str) -> None:
     np.savetxt(filename_policy, self.policy, delimiter=",", fmt='%d')
     print(f"[INFO] Policy saved to {filename_policy }")
 
-def load_Q_matrix(self, n_episodes: int,name:str) -> List[List[float]]:
+def load_Q_matrix(n_episodes: int,name:str) -> List[List[float]]:
     """Loads the Q-matrix from a CSV file and returns it.
     
     Args:

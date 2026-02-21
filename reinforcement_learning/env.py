@@ -104,10 +104,10 @@ class Environment():
             next_state = self.state_space.get_state_from_index(closest_state_index)
             
             if max(next_state)>=1-self.delta:
-                reward = 0
+                reward = 0.0
 
             else : 
-                reward = -1
+                reward = -1.0
             
             info = {
                 "delta" : self.delta,
@@ -123,7 +123,7 @@ class Environment():
             confidence = float(np.max(posterior))
             terminated = (confidence >= 1.0 - float(delta))
             truncated = False # Will be set in the agent when we hit max steps
-            reward = 0 if terminated else -1
+            reward = 0.0 if terminated else -1.0
 
             info = {
                 "delta" : delta,
@@ -154,6 +154,9 @@ class Environment():
         
     def get_delta_current(self):
         return self.delta
+
+    def get_delta_final(self):
+        return self.state_space.get_delta()
     
     def get_posterior(self):
         return self.posterior

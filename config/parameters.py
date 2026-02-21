@@ -28,46 +28,43 @@ class Parameters :
                     mean_channel:float=0, 
                     std_channel:List[float] = [], 
                     sigma_alpha = 0, 
-                    gamma: float = 0.99,
-                    learning_rate_init: float = 5e-4,
                     params_list: List[int] = [32, 64],
                     batch_size: int = 128,
                     replay_buffer_memory_size: int = None,
-                    max_norm: float =1,
-                    do_gradient_clipping: bool = True,
                     loss_fct: str = 'mse',
+                    gamma: float = 0.99,
                     n_epochs: int = 10000,
                     n_time_steps_dqn: int = 200,
                     n_channels_train_DQN: int = 10,
                     freq_update_target: int = 1000,
                     tau: float = 0.05,
-                    max_len_path: int = 20,
-                    epsilon_init: float = 1,
+                    max_norm: float =1,
+                    do_gradient_clipping: bool = True,
+                    epsilon_init: float = 1.0,
                     epsilon_decay: float = 0.999,
                     epsilon_min: float = 0.01,
                     delta_init: float = 1e-1,
                     delta_decay: float = 1,
-                    train_or_test: bool = True,
+                    delta_min: float = 5 * 1e-2, 
                     targetNet_update_method : str = "soft",
                     Train_Deep_Q_Learning: bool = True,
                     saving_freq_DQN: int = 1,
                     test_freq_DQN: int = 1,
-                    Train_Q_Learning: bool = False,
                     n_episodes: int = 20,
                     n_time_steps_ql: int = 100,
                     n_channels_train_QL: int = 10,
+                    max_len_path: int = 20,
                     len_path: int = 10,
+                    learning_rate_init: float = 5e-4,
+                    learning_rate_decay: float = 0.99,
+                    learning_rate_min: float = 1e-4,
+                    Train_Q_Learning: bool = False,
                     saving_freq_QL: int = 1,
                     test_freq_QL: int = 1,
-                    delta_min: float = 5 * 1e-2, 
-                    len_window_action: int = 1, 
-                    len_window_channel: int = 1, 
                     precision: int = 2,  
                     blabla_other_states: int = 1, 
                     min_representatives_q_learning_train: int = 100,  
-                    min_representatives_q_learning_test: int = 10,
-                    learning_rate_decay: float = 0.99,
-                    learning_rate_min: float = 1e-4,
+                    min_representatives_q_learning_test: int = 10
                     # input_dims: int = None,
                     ) :
         
@@ -80,7 +77,6 @@ class Parameters :
         self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
         self.modification_channel = modification_channel
         self.type_channel = type_channel
-        self.len_window_channel = len_window_channel
         
         if type_channel == "IID":
             self.mean_channel = mean_channel
@@ -115,7 +111,6 @@ class Parameters :
         self.learning_rate_decay = learning_rate_decay
         self.learning_rate_min = learning_rate_min
 
-        self.len_window_action = len_window_action
         self.Train_Q_Learning = Train_Q_Learning
         self.saving_freq_QL= saving_freq_QL
         self.test_freq_QL = test_freq_QL
@@ -156,7 +151,6 @@ class Parameters :
         self.freq_update_target = freq_update_target
         self.targetNet_update_method = targetNet_update_method
 
-        self.train_or_test = train_or_test
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
