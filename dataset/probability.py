@@ -1,14 +1,13 @@
-import numpy as np
-import pickle
-import pandas as pd
 import scipy
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from typing import List
 from typing import Tuple
+import matplotlib.pyplot as plt
+
 from config.parameters import Parameters
 from dataset.monteCarlo import Dataset_probability 
-
 
 class Probability:
     """Updates a probability distribution (probability of being the best codeword):

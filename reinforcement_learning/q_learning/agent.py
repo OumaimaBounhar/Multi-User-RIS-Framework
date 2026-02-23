@@ -1,13 +1,10 @@
-import numpy as np 
 import random
-import pandas as pd
+import numpy as np 
 from tqdm import tqdm
-from typing import List
-from matplotlib import pyplot as plt 
 
 from reinforcement_learning.env import Environment
 from config.parameters import Parameters
-from reinforcement_learning.q_learning.utils import computes_percentage_unvisited_states, plot_Convergence,  save_policy, save_Q_matrix
+from reinforcement_learning.q_learning.utils import extract_Policy, computes_percentage_unvisited_states, plot_Convergence,  save_policy, save_Q_matrix, save_frequency_update_per_state, save_training_metrics
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule, LinearDecaySchedule
 
 class QLearningAgent():
@@ -31,28 +28,33 @@ class QLearningAgent():
         ## ---- Hyperparameters ----
         self.delta_final = environment.get_delta_final() ## Final degree of precision we want to reach, should correspond to the one in states
         params_dict = parameters.get_q_learning_parameters()
+
         self.n_episodes = params_dict["n_episodes"]
         self.n_channels_train = params_dict["n_channels_train"]
+        self.n_time_steps = params_dict["n_time_steps"]
+        self.max_len_path = params_dict["max_len_path"]
+
         self.gamma = params_dict["gamma"]
-        initial_q_value = params_dict["initial_q_value"]
+        self._greedy_mode = params_dict["_greedy_mode"]
+        self.initial_q_value = params_dict["initial_q_value"]
+
         learning_rate_init  = params_dict["learning_rate_init"]
-        learning_rate_decay = params_dict["learning_rate_decay"]
         learning_rate_min   = params_dict["learning_rate_min"]
+
         epsilon_init = params_dict["epsilon_init"]
         epsilon_decay = params_dict["epsilon_decay"]
-        epsilon_min = params_dict["epsilon_min"]
+        self.epsilon_min = params_dict["epsilon_min"]
+
         delta_init = params_dict["delta_init"]
         delta_decay = params_dict["delta_decay"]
         delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
-
 
         ## ---- Dataset ----
         self.name = name_file
         self.dataset_train,self.dataset_test = environment.get_dataset()
         
         ## ---- Q-Matrix ----
-        self.initial_value_Q_matrix = initial_q_value
-        self.Q_matrix = initial_q_value * np.ones((self.n_states, self.n_actions))
+        self.Q_matrix = self.initial_q_value * np.ones((self.n_states, self.n_actions))
 
         ## To check how many times the states were visited, we store counts in a "Q-matrix_frequency"
         self.Q_matrix_freq = np.zeros(self.n_states)
@@ -68,7 +70,7 @@ class QLearningAgent():
         self.epsilon_schedule = multiplicativeDecaySchedule(
                                                             init_value = epsilon_init,
                                                             decay = epsilon_decay,
-                                                            min_value = epsilon_min
+                                                            min_value = self.epsilon_min
                                                             )
         
         self.delta_schedule = multiplicativeDecaySchedule(
@@ -76,11 +78,8 @@ class QLearningAgent():
                                                             decay = delta_decay,
                                                             min_value = delta_min
                                                             )
-                
-        ## ---- Policy ----
-        self.policy = np.zeros(self.n_states, dtype = int)
 
-    def update_Q_matrix(self, reward: float, current_state: int, next_state: int, action: int, is_terminal: bool = False) -> None:
+    def update_Q_matrix(self, alpha, gamma, reward: float, current_state: int, next_state: int, action: int, is_terminal: bool = False) -> None:
         """Updates the Q-matrix using the Bellman equation : 
             Q(s,a) <- (1 - alpha) * Q(s,a) + alpha * (reward + gamma * max_a' Q(s',a'))
         Args:
@@ -92,11 +91,6 @@ class QLearningAgent():
         Returns:
             None
         """
-        ## Current hyperparameters
-        ## Schedule is the only source of truth value
-        alpha = self.learning_rate_schedule.get()
-        gamma = self.gamma
-
         # ---- Safety checks ----
         assert 0 <= current_state < self.n_states
         assert 0 <= next_state < self.n_states
@@ -148,15 +142,13 @@ class QLearningAgent():
     def train(self):
         """
         Train the Q-Learning agent.
-        
+
         """
         print("[INFO] Q-Learning Training : process Initiated...")
         print(f'The action-state space is of size {self.n_states * self.n_actions}')
         
         avg_len_train_epoch = []
-        avg_len_test_epoch = []
-
-        count_ep = 0
+        count_ep = 0 ## Counter for the greedy switch
 
         epsilon = self.epsilon_schedule.get()
         delta = self.delta_schedule.get()
@@ -164,36 +156,47 @@ class QLearningAgent():
 
         for episode in tqdm(range(self.n_episodes)):
             
-            ## Computes the number of states we visited, and if we visited them all change epsilon to use a greedy method
-            percentage_unvisited_states = computes_percentage_unvisited_states()
+            # ---- Exploration monitoring ----
+            percentage_unvisited_states = computes_percentage_unvisited_states(self.Q_matrix_freq)
             
-            if percentage_unvisited_states == 0:
-                print(f'[INFO] Q-Learning exploration : All states have been visited ! Setting epsilon to epsilon_min = {self.epsilon_schedule.reset()} ...')
-                if count_ep == 10 :
-                    epsilon = self.epsilon_schedule.reset()
+            ## If all states were visited, wait to confirm after 10 episodes then change epsilon to epsilon min to use a greedy method
+            if (percentage_unvisited_states == 0) and (not self._greedy_mode):
+                count_ep += 1
+                if count_ep >= 10 :
+                    self.epsilon_schedule.change(self.epsilon_min)
+                    epsilon = self.epsilon_schedule.get()
+                    self._greedy_mode = True
+                    print(
+                        f"[INFO] All states visited for 10 consecutive episodes. "
+                        f"Switching to greedy mode (epsilon={epsilon})."
+                        )
                 else:
-                    count_ep += 1
+                    count_ep = 0
             
-            # Update Delta value in the agent
+            # ---- Update delta and apply to environment ----
             delta = self.delta_schedule.step()
-
-            # Update Delta value in the environment
             self.environment.set_delta_current(delta)
 
-            ## Compute the average length on a test set
-            avg_len_train = self.train_one_epoch(
+            # ---- Train one episode ----
+            avg_len_train = self.train_one_episode(
                                                     epsilon = epsilon,
                                                     delta = delta,
-                                                    learning_rate = learning_rate
-                                                ) 
+                                                    alpha = learning_rate,
+                                                    gamma = self.gamma,
+                                                )
             avg_len_train_epoch.append(avg_len_train)
             
-            # # Update Epsilon and Alpha values in the agent
+            # ---- Update epsilon and learning rate schedules ----
             epsilon = self.epsilon_schedule.step()
             learning_rate = self.learning_rate_schedule.step()
 
-            tqdm.write(f'Episode: {episode+1}, Epsilon: {epsilon:.2f}, Delta: {delta:.2f}, Alpha: {learning_rate: 2f}, Percentage of unvisited states/actions: {percentage_unvisited_states:.2f}')
-            tqdm.write('---------------------------------------------------')
+            tqdm.write(
+                        f"Episode {episode+1}/{self.n_episodes} | "
+                        f"Epsilon: {epsilon:.3f} | "
+                        f"Delta: {delta:.3f} | "
+                        f"Alpha: {learning_rate:.3f} | "
+                        f"Unvisited states: {percentage_unvisited_states:.2f}%"
+                    )
             
             if episode % self.parameters.saving_freq_QL == 0:
                 
@@ -201,100 +204,88 @@ class QLearningAgent():
                 save_Q_matrix(episode,self.name)
 
                 # Extract policy
-                for s in range(self.n_states):
-                    # Choose the action with the highest Q-value for the current state 
-                    best_action_index = np.argmax(self.Q_matrix[s])
+                policy = extract_Policy(self.Q_matrix)
 
-                    # Update the policy with the chosen action for the current state
-                    self.policy[s] = best_action_index
-
-                # Save the Policy
-                save_policy(episode,self.name)
+                # Save policy
+                save_policy(policy, episode, self.name)
         
         print("[INFO] Q-Learning Training : Process Completed !")
         
-        # Save the Q-matrix and Policy for the last episode
+        # ---- Final save ----
         save_policy(self.n_episodes,self.name)
         save_Q_matrix(self.n_episodes,self.name)
         
-        filename_frequency = self.name + f"/frequency_after_{self.n_episodes}episodes_with_delta_=_{self.parameters.delta_init}_and_alpha=_{self.parameters.learning_rate_init}.csv"
-        np.savetxt(filename_frequency, self.Q_matrix_freq/self.number_update*100, delimiter=",")
-        print(f"[INFO] Frequency matrix saved to {filename_frequency}")
+        save_frequency_update_per_state(self.Q_matrix_freq, self.name, self.n_episodes, self.delta_schedule.init_value, self.learning_rate_schedule.init_value)
         
         smoothed_avg_len = np.convolve(avg_len_train_epoch, np.ones(10)/10, mode='valid')
         
         plot_Convergence(self.name, smoothed_avg_len)
+        save_training_metrics(self.name, avg_len_train_epoch)
         
-        output_df = pd.DataFrame({"Len Train": avg_len_train_epoch})
-        filename_data = self.name+"/Data_len_training.dat"
-        output_df.to_csv(filename_data)
-        print(f"[INFO] Mean len path during QL - Training saved to {self.name}")
-        
-    def train_one_epoch(self, epsilon: float, delta: float, learning_rate: float):
-        
-        
+    def train_one_episode(self, epsilon: float, delta: float, alpha: float, gamma: float):
+        """ 
+        Run one training epoch
+        =======
+        Args:
+        =======
+        @ epsilon : for the Epsilon Greedy Policy
+        @ delta: for the stopping criteria
+        @ learning_rate: value of alpha
+
+        Returns:
+        @ -mean_length_path : The average length of path after all the channel realization
+        """
         all_len_path = []
         
         for channel_realization in range(self.n_channels_train):
             
-            current_state_index = 0 ## We always start at the Initial State
-            length_path = 0 ## The length of the path we take to be able to measure how efficient the policy is
+            ## Start at the initial state
+            current_state_index = 0 
+            
+            # Length of the path metric to measure Policy efficiency
+            length_path = 0 
             
             ## Set the prior at the initial state
             self.environment.reset_prior()
-            len_window_channel = self.environment.get_len_window_channel()
             
             ## Generates a new channel (take it randomly from the dataset given in the environment)
-            if self.parameters.train_or_test:
-                index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
-                index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
-            else:
-                #index_class_channel = np.random.randint(0,len(self.dataset_test))
-                #index_specific_channel = np.random.randint(0,len((self.dataset_test)[index_class_channel][1]))
-                ## Test elements in the dataset one after the other
-                index_class_channel = time_step%len(self.dataset_test)
-                index_specific_channel = time_step//len(self.dataset_test)
-                if time_step//len(self.dataset_test) >= len((self.dataset_test)[index_class_channel][1]):
-                    index_specific_channel = np.random.randint(0,len((self.dataset_test)[index_class_channel][1]))
+            index_class_channel = np.random.randint(0,len(self.dataset_train)) 
+            index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1]))
+            
             index_channel = (index_class_channel,index_specific_channel)
+            done = False
         
-            for time_step in range(self.parameters.n_time_steps_ql):
+            for time_step in range(self.n_time_steps):
                 
-                for path in range(self.parameters.max_len_path):
-                    # max_len_path is big because we want to check if the policy really works
+                for path in range(self.max_len_path):
 
                     # Choose an action following Epsilon greedy Policy
                     index_action = self.choose_action(current_state_index,epsilon)
                         
                     # Update the state
-                    ## reset the list of samples and put prior = posterior
-                    if path % len_window_channel == 0:
-                        self.environment.reset_curse_dimension()
-                        
-                    # next_state_index , reward = self.environment.step(index_channel,tuple_action,train_or_test= self.parameters.train_or_test, model_type = 'QL')
-                    next_state_index , reward = self.environment.step(index_channel,index_action,train_or_test= self.parameters.train_or_test, model_type = 'QL')
+                    # Reset the list of samples and put prior = posterior
+                    self.environment.reset_curse_dimension()
+                    
+                    next_state_index , reward, info = self.environment.step(index_channel,index_action, model_type = 'QL')
+
                     # Save the reward
-                    if self.parameters.train_or_test:
-                        length_path += reward
-                    else:
-                        length_path += -1
+                    length_path += reward
                     
                     # Update the state-action value function
-                    self.update_Q_matrix(reward, current_state_index, next_state_index, index_action, is_terminal)
+                    self.update_Q_matrix(alpha, gamma, reward, current_state_index, next_state_index, index_action, is_terminal= info["Terminal_state"])
                     
                     current_state_index = next_state_index
                     current_state = self.environment.state_space.get_state_from_index(current_state_index)
                     
                     delta = self.environment.get_delta_current()
                     
-                    if self.parameters.train_or_test:
-                        if max(current_state)>=1-delta:
-                            break 
-                    else:
-                        probability = self.environment.get_posterior()
-                        if max(probability)>=1-delta:
-                            break
-                        
+                    if max(current_state)>=1-delta:
+                        done = True
+                        break 
+                
+                if done:
+                    break
+
             all_len_path.append(length_path)
         mean_length_path = np.mean(all_len_path)
 

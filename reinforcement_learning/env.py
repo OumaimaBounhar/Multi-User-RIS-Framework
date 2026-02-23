@@ -33,9 +33,6 @@ class Environment():
         self.List_Samples:list = [] ## To store the samples
         self.size_states = len(self.prior) # size of the vectors representing the states
         
-        self.len_window_action = parameters.len_window_action
-        self.len_window_channel = parameters.len_window_channel
-        
         self.delta = parameters.delta_init ## Initial delta
         
     def reset_prior(self):
@@ -105,6 +102,7 @@ class Environment():
             
             if max(next_state)>=1-self.delta:
                 reward = 0.0
+                is_terminal = True
 
             else : 
                 reward = -1.0
@@ -113,7 +111,8 @@ class Environment():
                 "delta" : self.delta,
                 "confidence" : max(posterior),
                 "chosen_action" : np.argmax(posterior),
-                "distance" : float(min_distance)
+                "distance" : float(min_distance),
+                "Terminal_state": is_terminal
             }
             
             return closest_state_index, reward, info
@@ -133,12 +132,6 @@ class Environment():
             }
 
             return posterior, reward, terminated, truncated, info
-
-    def get_len_window_action(self):
-        return self.len_window_action
-    
-    def get_len_window_channel(self):
-        return self.len_window_channel
     
     def get_dataset(self):
         return self.dataset_train,self.dataset_test

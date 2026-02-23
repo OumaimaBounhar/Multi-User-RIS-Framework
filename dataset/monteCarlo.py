@@ -1,16 +1,13 @@
 import numpy as np
 import pickle
-import pandas as pd
-import scipy
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from typing import List
 from typing import Tuple
 from config.parameters import Parameters
-from envs.feedback import Feedback
-from envs.channel import Channel
-from envs.codebooks import Codebooks
 
+from systemModel.channel import Channel
+from systemModel.codebooks import Codebooks
+from systemModel.feedback import Feedback
 
 class Dataset_probability:
     """ To compute the probability of p(Y|phi,h), we use Monte Carlo sampling to generate different h_i.

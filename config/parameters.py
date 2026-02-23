@@ -17,50 +17,62 @@ class Parameters :
                     N_R:int = 64, 
                     N_T:int = 1, 
                     N_RIS:int = 100, 
+
                     size_codebooks:List[int] = [16,30], 
                     type_codebooks:List[str] = ["Narrow_8","Hierarchical_3_2"],
-                    mean_noise:float = 0,
+
                     SNR: int = 30,
                     snr_values:List[int] = [-100,-50,0],
                     modification_channel: int = 0,
                     type_channel:str = "half-spaced ULAs",
                     type_modulation:str = "BPSK", 
+                    mean_noise:float = 0,
                     mean_channel:float=0, 
                     std_channel:List[float] = [], 
                     sigma_alpha = 0, 
-                    params_list: List[int] = [32, 64],
-                    batch_size: int = 128,
-                    replay_buffer_memory_size: int = None,
-                    loss_fct: str = 'mse',
+
                     gamma: float = 0.99,
-                    n_epochs: int = 10000,
-                    n_time_steps_dqn: int = 200,
-                    n_channels_train_DQN: int = 10,
-                    freq_update_target: int = 1000,
-                    tau: float = 0.05,
-                    max_norm: float =1,
-                    do_gradient_clipping: bool = True,
+                    _greedy_mode: bool = False,
+                    learning_rate_init: float = 5e-4,
+                    learning_rate_decay: float = 0.99,
+                    learning_rate_min: float = 1e-4,
                     epsilon_init: float = 1.0,
                     epsilon_decay: float = 0.999,
                     epsilon_min: float = 0.01,
                     delta_init: float = 1e-1,
                     delta_decay: float = 1,
                     delta_min: float = 5 * 1e-2, 
-                    targetNet_update_method : str = "soft",
-                    Train_Deep_Q_Learning: bool = True,
-                    saving_freq_DQN: int = 1,
-                    test_freq_DQN: int = 1,
+
+                    params_list: List[int] = [32, 64],
+                    loss_fct: str = 'mse',
+                    batch_size: int = 128,
+                    replay_buffer_memory_size: int = None,
+
+                    n_epochs: int = 10000,
+                    n_time_steps_dqn: int = 200,
+                    n_channels_train_DQN: int = 10,
+
                     n_episodes: int = 20,
                     n_time_steps_ql: int = 100,
                     n_channels_train_QL: int = 10,
                     max_len_path: int = 20,
                     len_path: int = 10,
-                    learning_rate_init: float = 5e-4,
-                    learning_rate_decay: float = 0.99,
-                    learning_rate_min: float = 1e-4,
+
+                    tau: float = 0.05,
+                    freq_update_target: int = 1000,
+                    targetNet_update_method : str = "soft",
+
+                    max_norm: float =1,
+                    do_gradient_clipping: bool = True,
+                    
+                    Train_Deep_Q_Learning: bool = True,
+                    saving_freq_DQN: int = 1,
+                    test_freq_DQN: int = 1,
+
                     Train_Q_Learning: bool = False,
                     saving_freq_QL: int = 1,
                     test_freq_QL: int = 1,
+
                     precision: int = 2,  
                     blabla_other_states: int = 1, 
                     min_representatives_q_learning_train: int = 100,  
@@ -107,6 +119,7 @@ class Parameters :
         self.len_path = len_path
 
         self.initial_q_value = -len_path 
+        self._greedy_mode = _greedy_mode
         
         self.learning_rate_decay = learning_rate_decay
         self.learning_rate_min = learning_rate_min
@@ -122,7 +135,6 @@ class Parameters :
         self.min_representatives_q_learning_test = min_representatives_q_learning_test
         self.max_samples_q_learning_test = 2*min_representatives_q_learning_test*size_codebooks[0] 
 
-        
         ### For DQN Parameters ###
         self.params_list = params_list
         self.loss_fct = loss_fct
@@ -154,7 +166,6 @@ class Parameters :
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
         self.saving_freq_DQN = saving_freq_DQN
         self.test_freq_DQN = test_freq_DQN
-        # self.input_dims = input_dims
         
         
     def get_channels_parameters(self):
@@ -190,6 +201,7 @@ class Parameters :
             "n_episodes": self.n_episodes,
             "n_channels_train": self.n_channels_train_QL,
             "n_time_steps": self.n_time_steps_ql,
+            "max_len_path": self.max_len_path,
             "len_path": self.len_path,
 
             "SNR" : self.SNR,
@@ -202,6 +214,7 @@ class Parameters :
             "learning_rate_min": self.learning_rate_min,
 
             "gamma": self.gamma,
+            "_greedy_mode": self._greedy_mode,
 
             "epsilon_init" : self.epsilon_init,
             "epsilon_decay": self.epsilon_decay,
@@ -211,7 +224,6 @@ class Parameters :
             "delta_decay": self.delta_decay,
             "delta_min": self.delta_min,
 
-            "len_window_action": self.len_window_action,
             "saving_freq": self.saving_freq_QL,
             "test_freq": self.test_freq_QL,
 
@@ -225,35 +237,40 @@ class Parameters :
     
     def get_dqn_parameters(self):
         return {
-            "gamma": self.gamma,
-            "learning_rate_init": self.learning_rate_init,
             "params_list": self.params_list,
+            "loss_fct": self.loss_fct,
             "batch_size": self.batch_size,
             "replay_buffer_memory_size": self.replay_buffer_memory_size,
-            "loss_fct": self.loss_fct,
+
             "n_epochs": self.n_epochs,
-            "n_time_steps": self.n_time_steps_dqn,
-            "freq_update_target": self.freq_update_target,
-            "tau": self.tau,
+            "n_channels_train": self.n_channels_train_DQN,
             "max_len_path": self.max_len_path,
+            "n_time_steps": self.n_time_steps_dqn,
+
+            "gamma": self.gamma,
+            "learning_rate_init": self.learning_rate_init,
+
             "epsilon_init": self.epsilon_init,
             "epsilon_decay": self.epsilon_decay,
             "epsilon_min": self.epsilon_min,
             "delta_init": self.delta_init,
             "delta_decay": self.delta_decay,
             "delta_min": self.delta_min,
-            "train_or_test": self.train_or_test,
-            "targetNet_update_method": self.targetNet_update_method,
-            "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
-            "saving_freq": self.saving_freq_DQN,
-            "test_freq": self.test_freq_DQN,
-            "n_channels_train": self.n_channels_train_DQN,
+
             "max_norm": self.max_norm,
             "do_gradient_clipping": self.do_gradient_clipping,
-            "snr_values": self.snr_values,
+            
+            "tau": self.tau,
+            "freq_update_target": self.freq_update_target,
+            "targetNet_update_method": self.targetNet_update_method,
+
+            "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
+            "saving_freq": self.saving_freq_DQN,
+            "test_freq_DQN": self.test_freq_DQN,
+            
             "SNR" : self.SNR,
-            "size_codebooks" :self.size_codebooks,
-            # "input_dims" : self.input_dims,
+            "snr_values": self.snr_values,
+            "size_codebooks" :self.size_codebooks
         }
     
     def save_to_file(self, filename, params_type='dqn'):
