@@ -1,59 +1,78 @@
+import math
 import numpy as np
+from dataclasses import dataclass
 from config.parameters import Parameters
+from typing import Optional, List, Tuple, Callable, Dict
+
+@dataclass
+class CodebookSpec:
+    kind: str                         # "random" | "dft" | "hierarchical" | "narrow"
+    N: Optional[int] = None           # for random/dft/narrow
+    K: Optional[int] = None           # hierarchical
+    M: Optional[int] = None           # hierarchical
 
 class Codebooks:
     """The codebooks that contains the matrices representing the coefficients of reflection of the RIS:
     First codebook: For the communication
     Second codebook: For the pilots
     """  
-    def __init__(self, parameters:Parameters):
+    def __init__(self, parameters:Parameters, seed: int = 0):
         self.parameters = parameters
+        self.rng = np.random.default_rng(seed)
         self.set_codebooks()
     
     def set_codebooks(self):
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
-        
-        N_RIS = (self.parameters.get_channels_parameters())[2]
+        size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
+        N_RIS = self.parameters.get_channels_parameters()[2]
         
         codebooks = []
         
-        for nb_codebook in range(0,len(type_codebooks)):
-            if type_codebooks[nb_codebook] == "random" :
-                # Random Values for all reflective elements
+        for size, spec in zip(size_codebooks, codebook_specs):
+            kind = spec.kind.lower()
+            
+            if kind == "random":
+                # Generate random values for all reflective elements
                 codebook = []
-                for nb_codeword in range(size_codebooks[nb_codebook]):
-                    #Create a random codeword of size (N_RIS,1)
-                    codeword = np.random.uniform(low= 0, high= 2*np.pi, size= N_RIS)
+                #Create a random codeword of size (N_RIS,1)
+                angles = self.rng.uniform(0, 2*np.pi, size=(size, N_RIS))
+                codebook.append(np.exp(1j * angles))  # store complex
+
+            elif kind == "dft":
+                # Generate a DFT Codebook
+                #Generate a list of evenly spaced values of theta between 0:2*pi
+                theta = (2*np.pi/size) * np.arange(size)
+                codebook = []
+                for nb_codeword in range(size):
+                    codeword = np.exp(1j * np.arange(N_RIS) * theta[nb_codeword])
                     codebook.append(codeword)
 
-            if type_codebooks[nb_codebook] == "DFT" :
-                # DFT Codebook
-                #Generate a list of evenly spaced values of theta between 0:2*pi
-                List_theta = (2*np.pi/size_codebooks[nb_codebook]) * np.arange(size_codebooks[nb_codebook])
+            elif kind == "hierarchical":
+                # Generate a hierarchical codebook, cf. def hierarchical_beam
+                K, M = spec.K, spec.M
+                if K is None or M is None:
+                    raise ValueError("hierarchical spec needs K and M")
                 codebook = []
-                for nb_codeword in range(0,size_codebooks[nb_codebook]):
-                    #Create a codeword of size (N_RIS,1)
-                    codeword = [np.exp(1j * index * List_theta[nb_codeword]) for index in range(0,N_RIS)]
-                    codebook.append(codeword)
-                    
-            if type_codebooks[nb_codebook][:12] == "Hierarchical" :
-                # Hierarchical Codebook, see def hierarchical_beam
-                K,M = find_K_M_hierarchical(type_codebooks[nb_codebook])
+                for k in range(1, K + 1):
+                    for m in range(M**k):
+                        codebook.append(self.hierarchical_beam(M, m, N_RIS, k))
+            
+            elif kind == "narrow":
+                N = spec.N
+                if N is None:
+                    raise ValueError("narrow spec needs N")
                 codebook = []
-                for k in range(1,K+1):
-                    for m in range(0,M**k):
-                        codeword = self.hierarchical_beam(M,m,N_RIS,k)
-                        codebook.append(codeword)
-                        
-            if type_codebooks[nb_codebook][:6] == "Narrow" :
-                # Create a narrow beam, ( the last layer of a hierarchical codebook)
-                N = find_N_narrow(type_codebooks[nb_codebook])
-                codebook = []
-                for n in range(0,N):
-                    codeword = self.narrow_beam(n,N_RIS,N)
-                    codebook.append(codeword)
-                
+                for n in range(N):
+                    codebook.append(self.narrow_beam(n, N_RIS, N))
+            
+            else:
+                raise ValueError(f"Unknown codebook kind: {spec.kind}")
+            
+            if len(codebook) != size:
+                raise ValueError(f"Size mismatch: asked size={size}, generated={len(codebook)} for {spec}")
+        
             codebooks.append(codebook)
+
+            print([len(cb) for cb in self.codebooks], "expected", size_codebooks)
             
         self.codebooks = codebooks
         
@@ -89,61 +108,6 @@ class Codebooks:
         """Return the codebooks"""
         return self.codebooks
 
-    def get_codeword(self, codebook_index:int,codeword_index:int) :
+    def get_codeword(self, codebook_index:int, codeword_index:int) :
         """Return the codeword number:codebook_index ,of the codebook of communication (codeword_index=0) or pilots (codeword_index=1)"""
         return self.codebooks[codebook_index][codeword_index] 
-
-def find_K_M_hierarchical(type_codebooks)->Tuple[int,int]:
-    """From the name of the codebook simply read the parameters of the hierarchical codebook"""
-    count = 0
-    while type_codebooks[count+13].isdigit():
-        count+=1
-    K = int(type_codebooks[13:13+count])
-    count2 = 1
-    while type_codebooks[count+13+count2].isdigit():
-        count2+=1
-        if count+13+count2 == len(type_codebooks):
-            break
-    M = int(type_codebooks[13+count+1:13+count+count2+1])
-    return K,M
-
-def find_N_narrow(type_codebooks)->int:
-    """From the name of the codebook simply read the parameters of the narrow codebook"""
-    count = 0
-    while type_codebooks[count+7].isdigit():
-        count+=1
-        if count+7 == len(type_codebooks):
-            break
-    N = int(type_codebooks[7:7+count])
-    return N
-    
-def check_size_cd(type_codebooks,size_codebooks)->Tuple[List[int],bool]:
-    """Check and correct the size of the codebooks,
-    Also checks if a hierarchical search is possible with the given codebooks"""
-    init_size_codebooks = size_codebooks
-    for type in range(0,2):
-        if type_codebooks[type][:12] == "Hierarchical":
-            K,M = find_K_M_hierarchical(type_codebooks[type])
-            size_codebooks[type] = sum([M**k for k in range(1,K+1)])
-            
-        if type_codebooks[type][:6] == "Narrow" :
-            N = find_N_narrow(type_codebooks[type])
-            size_codebooks[type] = N
-            
-    if type_codebooks[0][:6] == "Narrow" and type_codebooks[1][:12] == "Hierarchical":
-        K,M = find_K_M_hierarchical(type_codebooks[1])
-        N = find_N_narrow(type_codebooks[0])
-        if N == M**K:
-            Hierarchical_possible = True
-        else:
-            Hierarchical_possible = False
-            print("Check the dimensions of your codebooks, Narrow_N and Hierarchical_k_M should respect N = M**K")
-    else:
-        Hierarchical_possible = False
-        
-    if not Hierarchical_possible:
-        print("Hierarchical search not defined for those codebooks, look at the function check_size_cd")
-    if size_codebooks != init_size_codebooks:
-        print("size_codebooks was wrong, it was changed to:")
-        #print(size_codebooks)
-    return size_codebooks,Hierarchical_possible

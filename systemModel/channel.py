@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from config.parameters import Parameters
 
@@ -84,9 +85,6 @@ class Channel:
         params = self.parameters.get_channels_parameters()
         for channel in range(0,3): # 3 because Transmit Received and Direct
             att.append(([np.random.normal(1, params[5][channel][1][i]) + 1j * np.random.normal(1, params[5][channel][1][i]) for i in range(0,len(params[5][channel][1]))])*params[5][channel][0]/math.sqrt(2))
-        
-        #print(params[5][channel])
-        #print(att)
         self.Attenuation = att
         
     def set_angles(self,modification_channel):

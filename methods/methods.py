@@ -28,9 +28,6 @@ class Methods:
         self.feedback = feedback
         self.probability= probability
         self.state = state
-
-        self.len_window_channel = parameters.len_window_channel # length of the window to take into account the evolution of the channel, we assume the channel does not change drastically in the window
-        self.len_window_action = parameters.len_window_action
         self.Hierarchical_possible = check_size_cd(parameters.type_codebooks,parameters.size_codebooks) # Checks that the size of the codebooks are correct and fix it if not
         
         # Q-learning
@@ -41,8 +38,6 @@ class Methods:
         
     def get_parameters(self):
         return {
-            "len_window_channel": self.len_window_channel,
-            "len_window_action": self.len_window_action,
             "Hierarchical_possible": self.Hierarchical_possible,
             "Policy_Q": self.Policy_Q
         }
@@ -351,7 +346,7 @@ class Methods:
             Samples.append((RSE,index_codeword_tested))
             
             #index_codeword_tested = r.randint(0, size_codebooks[0]-1) + size_codebooks[1] - size_codebooks[0]
-  
+
         prior = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
         ordered_list = np.argsort(self.prior_random)[::-1] 
         

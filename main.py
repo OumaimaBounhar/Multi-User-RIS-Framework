@@ -1,21 +1,29 @@
 import numpy as np
+import pickle
+import csv
 import os
 
 from config.parameters import Parameters
 
 from dataset.monteCarlo import Dataset_probability
 from dataset.probability import Probability
+from dataset.noise_calibration import fit_noise, load_fitted_noise
 
-from systemModel.channel import Channel
+from systemModel.codebooks import CodebookSpec
 from systemModel.codebooks import Codebooks
+from systemModel.channel import Channel
 from systemModel.feedback import Feedback
 from systemModel.signal import Signal
 
 from methods.test import Test
+from methods.methods import Methods
 
 from reinforcement_learning.env import Environment
 from reinforcement_learning.states import State
+
 from reinforcement_learning.q_learning.agent import QLearningAgent
+from reinforcement_learning.q_learning.utils import load_Policy
+
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
@@ -25,18 +33,18 @@ from reinforcement_learning.deep_q_learning.components.seed import set_seed
 ###########################################################################
 
 all_size_of_codebooks = [
-                        [8, 14],
-                        # [16, 30],
-                        # [32, 62],
-                        # [64, 126]
+                            [8, 14],
+                            # [16, 30],
+                            # [32, 62],
+                            # [64, 126]
                         ]
 
-all_type_of_codebooks = [
-                        ["Narrow_8", "Hierarchical_3_2"],
-                        # ["Narrow_16", "Hierarchical_4_2"],
-                        # ["Narrow_32", "Hierarchical_5_2"],
-                        # ["Narrow_64", "Hierarchical_6_2"]
-                        ]
+all_codebook_specs = [
+                        [CodebookSpec(kind="narrow", N=8),
+                        CodebookSpec(kind="hierarchical", K=3, M=2)],
+                        # [CodebookSpec(kind="narrow", N=16),
+                        #  CodebookSpec(kind="hierarchical", K=4, M=2)],
+                    ]
 
 delta_values = [
                 # 3e-1,
@@ -45,19 +53,17 @@ delta_values = [
                 # 2e-2
                 ]
 
-for size_codebooks, type_codebooks in zip(all_size_of_codebooks, all_type_of_codebooks):
+for size_codebooks, codebook_specs in zip(all_size_of_codebooks, all_codebook_specs):
     for delta in delta_values:
         print("="*80)
-        print(f"[INFO] Starting simulation for codebooks {type_codebooks} with Δ={delta}")
+        print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
         print("="*80)
-
-        check_size_cd(type_codebooks,size_codebooks) 
 
         parameters = Parameters(    N_R=64, 
                                     N_T=1, 
                                     N_RIS=100, 
                                     size_codebooks=size_codebooks, 
-                                    type_codebooks=type_codebooks,
+                                    codebook_specs=codebook_specs,
                                     mean_noise=0,
                                     SNR=10,
                                     # snr_values = [0,5,10,20],
@@ -162,8 +168,8 @@ for size_codebooks, type_codebooks in zip(all_size_of_codebooks, all_type_of_cod
         else:
             params_modeled_noise = fit_noise(filename,feedback,channel,parameters)
             
-        ### For the dataset we load if already generated ###
-        ### Creating a dataset takes time ###
+        ## Creating a dataset takes time ###
+        ## We reuse exactly the parameters used to generate the dataset
         if not new_dataset:
             dataset_proba  = pickle.load(open(filename+"/Dataset.pickle", "rb", -1))
             parameters,codebooks = dataset_proba.get_params_codebook()
@@ -269,11 +275,6 @@ for size_codebooks, type_codebooks in zip(all_size_of_codebooks, all_type_of_cod
 
             # Start training
             Policy_network = agent.train(params_dict = dqn_parameters, testing_objects_dict = testing_objects_dict)
-            
-            # flops, macs, params = calculate_flops_hf(model_name=Policy_network, input_shape=(parameters.batch_size, 14))
-            # print("%s FLOPs:%s  MACs:%s  Params:%s \n" %(Policy_network, flops, macs, params))
-            
-            # agent.save_model_complexity(Policy_network, params_dict = dqn_parameters)
 
         Policy_network.eval()
 

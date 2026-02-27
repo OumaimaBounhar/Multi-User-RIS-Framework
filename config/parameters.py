@@ -1,8 +1,7 @@
-from typing import List
-from typing import Tuple
 import math
 import numpy as np
-
+from typing import List, Optional
+from systemModel.codebooks import CodebookSpec
 
 class Parameters :
     """ Contains all of the parameters for our simulation:
@@ -18,8 +17,11 @@ class Parameters :
                     N_T:int = 1, 
                     N_RIS:int = 100, 
 
-                    size_codebooks:List[int] = [16,30], 
-                    type_codebooks:List[str] = ["Narrow_8","Hierarchical_3_2"],
+                    size_codebooks:List[int] = [8,14], 
+                    codebook_specs: List[CodebookSpec] =  [
+                                                    CodebookSpec(kind="narrow", N=8),
+                                                    CodebookSpec(kind="hierarchical", K=3, M=2),
+                                                    ],
 
                     SNR: int = 30,
                     snr_values:List[int] = [-100,-50,0],
@@ -28,7 +30,7 @@ class Parameters :
                     type_modulation:str = "BPSK", 
                     mean_noise:float = 0,
                     mean_channel:float=0, 
-                    std_channel:List[float] = [], 
+                    std_channel:Optional[List[float]] = None, 
                     sigma_alpha = 0, 
 
                     gamma: float = 0.99,
@@ -92,6 +94,8 @@ class Parameters :
         
         if type_channel == "IID":
             self.mean_channel = mean_channel
+            if std_channel is None:
+                std_channel = []
             self.std_channel = std_channel
         
         if type_channel == "half-spaced ULAs":
@@ -110,7 +114,7 @@ class Parameters :
         ### For the codebook ###
         self.size_codebooks = size_codebooks
         print(f'size_codebooks : {size_codebooks}')
-        self.type_codebooks = type_codebooks # Communication / Pilots
+        self.codebook_specs = codebook_specs # Communication / Pilots
         
         ### For Q-Learning parameters ###
         self.n_episodes = n_episodes
@@ -181,7 +185,7 @@ class Parameters :
         return self.type_modulation 
     
     def get_codebook_parameters(self):
-        return self.size_codebooks, self.type_codebooks
+        return self.size_codebooks, self.codebook_specs
     
     def set_N_RIS(self,N_RIS:int):
         self.N_RIS = N_RIS

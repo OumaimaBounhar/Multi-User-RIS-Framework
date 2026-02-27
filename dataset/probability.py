@@ -1,4 +1,5 @@
 import scipy
+import scipy.stats
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -48,19 +49,9 @@ class Probability:
                 min_likelihood = float("inf")
                 for sample_index in range(0,len(new_sample)):
                     Y,phi_index = new_sample[sample_index]
-                    #likelihood_montecarlo = likelihood_montecarlo + abs(Y-F[montecarlo][phi_index]-self.noise_mean)**2/self.noise_std**2
-                    likelihood_montecarlo = likelihood_montecarlo + (abs(Y-F[montecarlo][phi_index])**2) ### Before
-                    #likelihood_montecarlo = likelihood_montecarlo + abs(Y-F[montecarlo][phi_index])**2 ## New
-                    #likelihood_montecarlo = likelihood_montecarlo + abs(Y-F[montecarlo][phi_index])/Y
-                    #likelihood_montecarlo = likelihood_montecarlo + abs(Y-F[montecarlo][phi_index])**2
-                #likelihood_montecarlo = np.exp(-likelihood_montecarlo)
-                #if likelihood_montecarlo < min_likelihood:
-                    #min_likelihood = likelihood_montecarlo
-                likelihood_montecarlo = 1/(likelihood_montecarlo+1e-2) ## Before To prevent dividing by zero
-                likelihood = likelihood + likelihood_montecarlo ### Before###
-            #likelihood = 1/(min_likelihood+1e-4) ### new ###
-            #print(index)
-            #print(likelihood)
+                    likelihood_montecarlo = likelihood_montecarlo + (abs(Y-F[montecarlo][phi_index])**2) 
+                likelihood_montecarlo = 1/(likelihood_montecarlo+1e-2) 
+                likelihood = likelihood + likelihood_montecarlo ## To prevent dividing by zero
             posterior[index] = likelihood*prior[index]
         posterior = posterior + 1e-8 ## To prevent dividing by zero
         posterior = posterior/sum(posterior)
@@ -83,68 +74,6 @@ def load_fitted_noise(filename:str):
     csv_noise = pd.read_csv(file)
     Noise_parameters = csv_noise.to_numpy()[:,1:]
     return Noise_parameters[0].item(),Noise_parameters[1].item()
-
-# def fit_noise(filename:str,feedback:Feedback,channel:Channel,parameters:Parameters,max_samples=1000):
-#     data = []
-#     size_codebooks, type_codebooks = parameters.get_codebook_parameters()
-#     print("Fitting Real noise to gaussian noise")
-#     for sample in tqdm(range(max_samples)):
-#         channel.new_channel()
-#         for n_communications in range(0,size_codebooks[1]):
-#             feedback.transmit(n_communications,codebook_used=1)
-#             RSE = feedback.get_feedback(noise=True)
-#             RSE_no_noise = feedback.get_feedback(noise=False)
-#             data.append(RSE-RSE_no_noise)
-#     res = scipy.stats.norm.fit(data)
-#     res_pd = pd.DataFrame(np.array([res[0],res[1]]))
-#     res_pd.to_csv(filename + "/Noise_parameters.csv")
-#     return res
-
-# def fit_noise(filename:str,feedback:Feedback,channel:Channel,parameters:Parameters,max_samples=1000):
-#     data = []
-#     Noise_Contribution = []
-#     size_codebooks, _ = parameters.get_codebook_parameters()
-#     print("Fitting Real noise to gaussian noise")
-    
-#     for sample in tqdm(range(max_samples)):
-#         channel.new_channel()
-#         for n_communications in range(size_codebooks[1]):
-#             feedback.transmit(n_communications, codebook_used=1)
-#             RSE = feedback.get_feedback(noise=True)
-#             RSE_no_noise = feedback.get_feedback(noise=False)
-#             data.append(RSE - RSE_no_noise)
-#             Noise_Contribution.append((RSE - RSE_no_noise)/RSE)
-            
-#     res = scipy.stats.norm.fit(data)
-#     res_pd = pd.DataFrame(np.array([res[0],res[1]]))
-#     res_pd.to_csv(filename + "/Noise_parameters.csv")
-    
-#     # Plot histogram
-#     plt.figure(figsize=(10, 6))
-#     plt.hist(Noise_Contribution, bins=30, density=True, alpha=0.6, color='b', edgecolor='black', label='Noise Contribution')
-    
-#     # Plot fitted Gaussian curve
-#     xmin, xmax = plt.xlim()
-#     x = np.linspace(xmin, xmax, 100)
-#     p = scipy.stats.norm.pdf(x, res[0], res[1])
-#     plt.plot(x, p, 'r', linewidth=2, label='Fitted Gaussian')
-    
-#     plt.title('Histogram of Noise Contribution with Gaussian Fit')
-#     plt.xlabel('Noise Contribution')
-#     plt.ylabel('Density')
-#     plt.legend()
-#     plt.grid(True)
-    
-#     plt.savefig(filename + "/Noise_histogram.png")
-#     plt.close()
-    
-#     return res
-
-import numpy as np
-import pandas as pd
-import scipy.stats
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
     print("Fitting real noise to Gaussian noise")
