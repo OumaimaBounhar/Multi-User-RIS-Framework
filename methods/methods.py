@@ -28,7 +28,6 @@ class Methods:
         self.feedback = feedback
         self.probability= probability
         self.state = state
-        self.Hierarchical_possible = check_size_cd(parameters.type_codebooks,parameters.size_codebooks) # Checks that the size of the codebooks are correct and fix it if not
         
         # Q-learning
         self.Policy_Q = Policy_Q
@@ -38,7 +37,6 @@ class Methods:
         
     def get_parameters(self):
         return {
-            "Hierarchical_possible": self.Hierarchical_possible,
             "Policy_Q": self.Policy_Q
         }
         
@@ -48,17 +46,18 @@ class Methods:
         
     def forget(self)->None:
         """A new receiver appears, no knowledge is accessible we reinitialize all methods with no prior knowledge"""
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
+        size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
         ### Exhaustive ###
         self.counter_exhaustive = 0 # Count the number of beams tested (we test all codeword of communications one after the other then starts again)
         self.list_exh = np.zeros(size_codebooks[0]) # Contains the RSE for the codewords tested for exhaustive search
         ### Hierarchical ###
-        if self.Hierarchical_possible:
-            self.K,self.M = find_K_M_hierarchical(type_codebooks[1])
-            self.counter_hierarchical = 0 # Count the number of beams tested for hierarchical search (between 0 and K*M)
-            self.argmax_hier = 0
-            self.list_hier = np.zeros(self.M) # contains the M elements tested to compare them and select the next branch
-            self.hier_best_beam = r.randint(0,size_codebooks[0]-1) # the best beam found by the hierarchical search, initialized randomly
+        for _, spec in zip(size_codebooks, codebook_specs):
+            if spec.kind.lower() == "hierarchical":
+                self.K,self.M = spec.K, spec.M
+        self.counter_hierarchical = 0 # Count the number of beams tested for hierarchical search (between 0 and K*M)
+        self.argmax_hier = 0
+        self.list_hier = np.zeros(self.M) # contains the M elements tested to compare them and select the next branch
+        self.hier_best_beam = r.randint(0,size_codebooks[0]-1) # the best beam found by the hierarchical search, initialized randomly
         ### Random Sampling ###
         self.prior_random = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
         self.ordered_list_random = np.argsort(self.prior_random)[::-1] 
@@ -86,7 +85,7 @@ class Methods:
         List_RSE = []
         ### To find the real optimal codeword ###
         ### Exhaustive search on the communication codebook (codebook_used=0), no noise ###
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
+        size_codebooks, _ = self.parameters.get_codebook_parameters()
         for M in range(size_codebooks[0]):
             self.feedback.transmit(M,codebook_used=0)
             RSE = self.feedback.get_feedback(noise = False)
@@ -97,7 +96,7 @@ class Methods:
     def exhaustive(self)->int:
         ### Exhaustive search on the communication codebook (codebook_used=0), noise ###
         ### Test beams one after the other and declare the index of the highest RSE of the list ###
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
+        size_codebooks, _ = self.parameters.get_codebook_parameters()
         count = self.counter_exhaustive
         if count == size_codebooks[0]:
             count = 0
@@ -145,7 +144,7 @@ class Methods:
     
     def random_sampling(self)->int:
         ### Randomly selects pilots, then compute probability, with noise ###
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
+        size_codebooks, _ = self.parameters.get_codebook_parameters()
         prior = self.prior_random
         ordered_list = self.ordered_list_random
         counter = self.counter_random

@@ -41,63 +41,71 @@ def main():
             parameters = Parameters(    N_R=64, 
                                         N_T=1, 
                                         N_RIS=100, 
+
                                         size_codebooks=size_codebooks, 
                                         codebook_specs=codebook_specs,
+
                                         mean_noise=0,
                                         SNR=10,
                                         # snr_values = [0,5,10,20],
                                         snr_values = [20],
-                                        modification_channel=0,
                                         type_channel="half-spaced ULAs",
                                         type_modulation="BPSK", 
                                         mean_channel=0, 
                                         std_channel=[], 
                                         sigma_alpha=0, 
+
                                         gamma=0.94,
+                                        _greedy_mode = False,
                                         learning_rate_init=5e-5,
+                                        learning_rate_decay = 0.99,
+                                        learning_rate_min = 1e-4,
+                                        epsilon_init=1,
+                                        epsilon_decay=0.992,
+                                        epsilon_min=0.01,
+                                        delta_init=delta,
+                                        delta_decay=1,
+                                        delta_final=5e-2, 
+
                                         params_list=[256,256],
+                                        loss_fct='mse',
                                         batch_size=1024,
                                         replay_buffer_memory_size=120000,
-                                        max_norm=0.5,
-                                        do_gradient_clipping = True,
-                                        loss_fct='mse',
+
                                         n_epochs=10000,
                                         # n_epochs = 5,
                                         n_time_steps_dqn=64,
                                         n_channels_train_DQN=5,
                                         # n_channels_train_DQN=1,
-                                        freq_update_target=20,
-                                        tau = 0.05,
-                                        max_len_path=20,
-                                        epsilon=1,
-                                        epsilon_decay=0.992,
-                                        epsilon_min=0.01,
-                                        delta_init=delta,
-                                        delta_decay=1,
-                                        train_or_test=True,
-                                        Train_Deep_Q_Learning=True,
-                                        saving_freq_DQN=500,
-                                        # saving_freq_DQN=1,
-                                        test_freq_DQN=1,
-                                        Train_Q_Learning=True,
+                                        
                                         n_episodes=10000,
                                         # n_episodes=5,
                                         n_time_steps_ql=64,
                                         n_channels_train_QL=5,
+                                        max_len_path=20,
                                         len_path=20,
+                                        
+                                        tau = 0.05,
+                                        freq_update_target=20,
+                                        targetNet_update_method = "soft",
+
+                                        max_norm=0.5,
+                                        do_gradient_clipping = True,
+                                        
+                                        Train_Deep_Q_Learning=True,
+                                        saving_freq_DQN=500,
+                                        # saving_freq_DQN=1,
+                                        test_freq_DQN=1,
+
+                                        Train_Q_Learning=True,
                                         saving_freq_QL = 500,
                                         # saving_freq_QL = 1,
                                         test_freq_QL = 1,
-                                        delta_final=5e-2, 
-                                        len_window_action=1, 
-                                        len_window_channel=10, 
+                                        
                                         precision=2,  
                                         blabla_other_states=1, 
                                         min_representatives_q_learning_train=100, 
-                                        min_representatives_q_learning_test=10,
-                                        learning_rate_decay = 0.99,
-                                        learning_rate_min = 1e-4
-                                        
+                                        min_representatives_q_learning_test=10
                                         ) # All the parameters stored in a class
 
             paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
@@ -123,7 +131,11 @@ def main():
             q_policy = runner.run_q_learning()
 
             # Train Deep Q-Learning and get the policy
-            dqn_agent, dqn_policy = runner.run_deep_q_learning()
+            dqn_out = runner.run_deep_q_learning()
+            if dqn_out is None:
+                dqn_agent, dqn_policy = None, None
+            else:
+                dqn_agent, dqn_policy = dqn_out 
             
             runner.run_testing(q_policy, dqn_agent, dqn_policy)
 

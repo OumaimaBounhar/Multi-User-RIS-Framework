@@ -24,32 +24,23 @@ class Channel:
             
             if N_RIS !=0:
                 for i in range(params[4][0]):
-                    #a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[0][0][i])) for index in range(0,N_R)]])/math.sqrt(N_R)
                     a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[0][0][i])) for index in range(0,N_R)]])
-                    #a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[0][1][i])) for index in range(0,N_RIS)]])/math.sqrt(N_RIS)
                     a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[0][1][i])) for index in range(0,N_RIS)]])
                     att = Attenuation[0][i]
-                    #att = 100
                     h_R += att * np.dot(np.conj(a_1).T,np.array(a_2))
                 for i in range(params[4][1]):
-                    #a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[1][0][i])) for index in range(0,N_RIS)]])/math.sqrt(N_RIS)
                     a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[1][0][i])) for index in range(0,N_RIS)]])
-                    #a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[1][1][i])) for index in range(0,N_T)]])/math.sqrt(N_T)
                     a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[1][1][i])) for index in range(0,N_T)]])
                     att = Attenuation[1][i]
-                    #att = 100
                     h_T += att * np.dot(np.conj(a_1).T,np.array(a_2))
             else:
                 h_R = 0
                 h_T = 0
             h_D = np.zeros((N_R,N_T),dtype="complex")
             for i in range(params[4][2]):
-                #a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[2][0][i])) for index in range(0,N_R)]])/math.sqrt(N_R)
                 a_1 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[2][0][i])) for index in range(0,N_R)]])
-                #a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[2][1][i])) for index in range(0,N_T)]])/math.sqrt(N_T)
                 a_2 = np.array([[np.exp(1j * np.pi * index * np.sin(Angles[2][1][i])) for index in range(0,N_T)]])
                 att = Attenuation[2][i]
-                #att = 100
                 h_D += att * np.dot(np.conj(a_1).T,np.array(a_2))
             
         self.h_R = h_R
@@ -74,7 +65,6 @@ class Channel:
         params = self.parameters.get_channels_parameters()
         for channel in range(0,3): # 3 because Transmit Received and Direct
             angles.append([np.random.uniform(0,2*np.pi,params[4][channel]), np.random.uniform(0,2*np.pi,params[4][channel])])
-            #angles.append([np.random.randint(9,size =params[4][channel])/2/math.pi,np.random.randint(9,size=params[4][channel])/2/math.pi])
         self.Angles = angles
         
     def set_random_attenuation(self):

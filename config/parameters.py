@@ -24,7 +24,6 @@ class Parameters :
 
                     SNR: int = 30,
                     snr_values:List[int] = [-100,-50,0],
-                    modification_channel: int = 0,
                     type_channel:str = "half-spaced ULAs",
                     type_modulation:str = "BPSK", 
                     mean_noise:float = 0,
@@ -78,7 +77,6 @@ class Parameters :
                     blabla_other_states: int = 1, 
                     min_representatives_q_learning_train: int = 100,  
                     min_representatives_q_learning_test: int = 10
-                    # input_dims: int = None,
                     ) :
         
         ### For the channel ###
@@ -88,7 +86,6 @@ class Parameters :
         self.N_RIS = N_RIS  # Number Reflective elements at the RIS
         
         self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
-        self.modification_channel = modification_channel
         self.type_channel = type_channel
         
         if type_channel == "IID":

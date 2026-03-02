@@ -1,6 +1,8 @@
 import os
+import math
 import torch
 import numpy as np 
+import pandas as pd
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 
@@ -10,6 +12,7 @@ from config.parameters import Parameters
 from dataset.probability import Probability
 
 from reinforcement_learning.q_learning.agent import QLearningAgent
+from reinforcement_learning.q_learning.utils import load_Policy
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 
 class Test:
@@ -40,7 +43,6 @@ class Test:
         channel = testing_objects_dict["channel"]
         feedback = testing_objects_dict["feedback"]
         probability = testing_objects_dict["probability"]
-        Hierarchical_possible = testing_objects_dict["Hierarchical_possible"]
         Policy_Q = testing_objects_dict["Policy_Q"]
         states = testing_objects_dict["states"]
         modification_channel = testing_objects_dict["modification_channel"]
@@ -48,14 +50,8 @@ class Test:
         snr_values = testing_objects_dict["snr_values"]
         #Policy_network = self.evaluation_q_network
         
-        if Hierarchical_possible:
-            #label = ["Exhaustive","Hierarchical","Random sampling","Q-Learning Sampling","Boosted Q-Learning Probability","Boosted Q-Learning Highest"] ## Methods to compare
-            label = ["Exhaustive","Hierarchical","Random sampling", "Deep Q-Learning","Q-Learning"] ## Methods to compare
-            # label = ["Exhaustive","Hierarchical","Random sampling","Deep Q-Learning"] ## Methods to compare
-            # label = ["Exhaustive","Hierarchical","Random sampling","Q-Learning"] ## Methods to compare
-        else:
-            label = ["Exhaustive","Random sampling","Q-Learning Sampling"] ## Methods to compare  
-        
+        label = ["Exhaustive","Hierarchical","Random sampling", "Deep Q-Learning","Q-Learning"] ## Methods to compare
+
         for SNR in snr_values :  # Loop over all SNR values
             
             self.parameters.set_SNR(SNR)  # Ensure channel is updated for each SNR
@@ -113,9 +109,8 @@ class Test:
                     #print(index_exhaustive)
                     
                     ### Hierarchical search ###
-                    if Hierarchical_possible:
-                        index_hierarchical = methods.hierarchical()
-                        list_algorithms_class.append(index_hierarchical)
+                    index_hierarchical = methods.hierarchical()
+                    list_algorithms_class.append(index_hierarchical)
                     #print(index_hierarchical)
                     
                     ### Random Sampling search ###
@@ -133,37 +128,6 @@ class Test:
                     list_algorithms_class.append(index_q_learning)
                     stats_QL_actions_list.append(index_q_learning)
                     
-                    # prob_computed_random = methods.posterior_random
-                    # if max(prob_computed_random) < 1-self.parameters.delta_init and not successful_episode:
-                    #     len_path_computed += 1
-                    # if max(prob_computed_random) >= 1-self.parameters.delta_init: 
-                    #     successful_episode = True
-                        
-                    # prob_computed = methods.posterior_q
-                    
-                    #print(prob_computed)
-                    #if max(prob_computed) < 1-delta_init and not successful_episode:
-                        #len_path_computed += 1
-                    #if max(prob_computed) >= 1-delta_init: 
-                        #successful_episode = True
-                    
-                    ### Narrow beam search ###
-                    #index_boost_proba = methods.test_narrow(index_optimal_cd)
-                    #list_algorithms_class.append(index_boost_proba)
-                    
-                    ### Narrow beam search ###
-                    #index_boost_highest = methods.test_narrow_2(index_optimal_cd)
-                    #list_algorithms_class.append(index_boost_highest)
-                    
-                    #sum_prob = methods.test_maxprob(correct_class)
-                    #Sum[t] = Sum[t] + sum_prob
-                    
-                    #print(t)
-                    #if index_q_narrow == index_optimal_cd:
-                        #print("Correct")
-                    #if index_q_learning != index_optimal_cd:
-                        #print("Incorrect")
-                        
                     ### Metrics to measure performances ###
                     correct_class[t] = correct_class[t] + [index == index_optimal_cd for index in list_algorithms_class]
                     # CHANGE !!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -251,34 +215,6 @@ class Test:
             plt.savefig(f"{filename}/Image_strength_epoch_{epoch}_snr_{SNR}.png")
             plt.close()
 
-            # # Plot Histogram of Actions Taken by DQN
-            # plt.figure(figsize=(10, 6))
-            # plt.hist(stats_DQN_actions_list, bins=range(min(stats_DQN_actions_list), max(stats_DQN_actions_list) + 2), edgecolor='black', align='left')
-            # plt.xlabel('Action')
-            # plt.ylabel('Frequency')
-            # plt.title(f'Histogram of Actions Taken by DQN at SNR = {SNR}')
-            # plt.savefig(f"{filename}/stats_DQN_snr_{SNR}_epoch_{epoch}.png")
-            # plt.close()
-            
-            # # Plot Histogram of Actions Taken by Q-Learning
-            # plt.figure(figsize=(10, 6))
-            # plt.hist(stats_QL_actions_list, bins=range(min(stats_QL_actions_list), max(stats_QL_actions_list) + 2), edgecolor='black', align='left')
-            # plt.xlabel('Action')
-            # plt.ylabel('Frequency')
-            # plt.title(f'Histogram of Actions Taken by Q-Learning at SNR = {SNR}') 
-            # plt.savefig(f"{filename}/stats_QL_actions_snr_{SNR}_epoch_{epoch}.png") 
-            # plt.close()
-
-            # # Plot Histogram of Path Lengths
-            # plt.figure(figsize=(10, 6))
-            # plt.hist(all_len_path_per_SNR, bins=20, alpha=0.5, label='Path Length')
-            # plt.xlabel('Value')
-            # plt.ylabel('Frequency')
-            # plt.title(f'Distribution of Path Lengths at SNR = {SNR}')
-            # plt.legend()
-            # plt.savefig(f"{filename}/distribution_path_length_snr_{SNR}_epoch_{epoch}.png")
-            # plt.close()
-
             # Plot Number of Successful Episodes by Epoch
             plt.figure(figsize=(10, 6))
             plt.plot(range(1, len(successful_episodes_per_epoch) + 1), successful_episodes_per_epoch, marker='o', linestyle='-', color='b')
@@ -350,7 +286,7 @@ class Test:
                 print(checkpoint_path)
 
                 # Instantiate the DQN model and load the state dict from the checkpoint
-                model = DQN(self.parameters, input_dims=self.DQN.input_dims, n_actions=self.DQN.n_actions)
+                model = DeepQLearningAgent(self.parameters, input_dims=self.DQN.input_dims, n_actions=self.DQN.n_actions)
                 model.load_state_dict(torch.load(checkpoint_path))
                 model.eval()
 
@@ -401,7 +337,7 @@ class Test:
                 print(f"[INFO] Loading DQN model from {checkpoint_path}")
 
                 # Instantiate the DQN model and load the state dict from the checkpoint
-                model = DQN(self.parameters, input_dims=self.DQN.input_dims, n_actions=self.DQN.n_actions)
+                model = DeepQLearningAgent(self.parameters, input_dims=self.DQN.input_dims, n_actions=self.DQN.n_actions)
                 model.load_state_dict(torch.load(checkpoint_path))
                 model.eval()
 
@@ -446,7 +382,7 @@ class Test:
                 # Load the Q-Learning policy
                 policy_path = os.path.join(checkpoints_dir_ql, policy_file)
                 print(f"[INFO] Loading Q-Learning policy from {policy_path}")
-                policy = self.load_Policy(epoch, checkpoints_dir_ql)  # Use your load_Policy method
+                policy = load_Policy(epoch, checkpoints_dir_ql)  # Use your load_Policy method
                 
                 # Set the loaded policy in the Q-Learning class
                 self.policy = policy  
@@ -463,7 +399,6 @@ class Test:
         channel = testing_objects_dict["channel"]
         feedback = testing_objects_dict["feedback"]
         probability = testing_objects_dict["probability"]
-        Hierarchical_possible = testing_objects_dict["Hierarchical_possible"]
         states = testing_objects_dict["states"]
         filename = testing_objects_dict["filename"]
         
@@ -487,17 +422,7 @@ class Test:
                                 states,
                                 Policy)
 
-
-            Hierarchical_possible = True
-
-            if Hierarchical_possible:
-                    #label = ["Exhaustive","Hierarchical","Random sampling","Q-Learning Sampling","Boosted Q-Learning Probability","Boosted Q-Learning Highest"] ## Methods to compare
-                    # label = ["Exhaustive","Hierarchical","Random sampling", "Deep Q-Learning","Q-Learning"] ## Methods to compare
-                    # label = ["Exhaustive","Hierarchical","Random sampling","Deep Q-Learning"] ## Methods to compare
-                    label = ["Exhaustive","Hierarchical","Random sampling","Q-Learning"] ## Methods to compare
-            else:
-                    label = ["Exhaustive","Random sampling","Q-Learning Sampling"] ## Methods to compare  
-            
+            label = ["Exhaustive","Hierarchical","Random sampling","Q-Learning"] ## Methods to compare
             correct_class = np.zeros((T,len(label)))
             Relative_strength = np.zeros((T,len(label)))
 
@@ -525,9 +450,8 @@ class Test:
                     #print(index_exhaustive)
                     
                     ### Hierarchical search ###
-                    if Hierarchical_possible:
-                        index_hierarchical = methods.hierarchical()
-                        list_algorithms_class.append(index_hierarchical)
+                    index_hierarchical = methods.hierarchical()
+                    list_algorithms_class.append(index_hierarchical)
                     #print(index_hierarchical)
                     
                     ### Random Sampling search ###
