@@ -1,7 +1,9 @@
 import math
 import numpy as np
-from typing import List, Optional
-from systemModel.codebooks import CodebookSpec
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from systemModel.codebooks import CodebookSpec
 
 class Parameters :
     """ Contains all of the parameters for our simulation:
@@ -18,10 +20,7 @@ class Parameters :
                     N_RIS:int = 100, 
 
                     size_codebooks:List[int] = [8,14], 
-                    codebook_specs: List[CodebookSpec] =  [
-                                                    CodebookSpec(kind="narrow", N=8),
-                                                    CodebookSpec(kind="hierarchical", K=3, M=2),
-                                                    ],
+                    codebook_specs: Optional[List["CodebookSpec"]] = None,
 
                     SNR: int = 30,
                     snr_values:List[int] = [-100,-50,0],
@@ -114,6 +113,13 @@ class Parameters :
         ### For the codebook ###
         self.size_codebooks = size_codebooks
         print(f'size_codebooks : {size_codebooks}')
+        if codebook_specs is None:
+            # Deferred import to avoid circular import with systemModel.codebooks.
+            from systemModel.codebooks import CodebookSpec
+            codebook_specs = [
+                CodebookSpec(kind="narrow", N=8),
+                CodebookSpec(kind="hierarchical", K=3, M=2),
+            ]
         self.codebook_specs = codebook_specs # Communication / Pilots
         
         ### For Q-Learning parameters ###

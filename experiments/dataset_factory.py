@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Tuple
 
 from experiments.store import Store
 from dataset.monteCarlo import Dataset_probability
@@ -39,7 +38,7 @@ class DatasetFactory:
             codebooks: Codebooks,
             feedback: Feedback,
             noisy_samples: bool = True
-        ) -> Tuple[Dataset_probability, Parameters, Codebooks]:
+        ) -> Dataset_probability:
         """ Main function responsible for returning the dataset for the experiment based on the specified mode.
 
             Args:
@@ -58,11 +57,8 @@ class DatasetFactory:
                 raise FileNotFoundError(f"No dataset found for reuse at {store.paths.dataset_pickle}. Please use a DatasetMode.GENERATE first.")
         
             print(f"[INFO] Reusing dataset from {store.paths.dataset_pickle}")
-            dataset = store.load_dataset()
-
-            stored_parameters, stored_codebooks = dataset.get_params_codebook()
-
-            return dataset, stored_parameters, stored_codebooks
+            
+            return store.load_dataset()
 
         if dataset_mode == DatasetMode.GENERATE:
             print("[INFO] Generating new dataset")
@@ -77,4 +73,4 @@ class DatasetFactory:
             store.save_dataset(dataset)
             print(f"[INFO] Dataset saved to {store.paths.dataset_pickle}")
 
-            return dataset, parameters, codebooks
+            return dataset

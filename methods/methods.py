@@ -4,7 +4,7 @@ import random as r
 from config.parameters import Parameters
 from systemModel.feedback import Feedback
 from systemModel.channel import Channel
-from methods.methods import Probability
+from dataset.probability import Probability
 from reinforcement_learning.states import State
 from reinforcement_learning.deep_q_learning.agent import *
 import torch

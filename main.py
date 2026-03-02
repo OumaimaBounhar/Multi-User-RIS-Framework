@@ -1,20 +1,11 @@
-import numpy as np
-
 from config.parameters import Parameters
-from systemModel.codebooks import CodebookSpec, Codebooks
-from systemModel.channel import Channel
-from systemModel.feedback import Feedback
-from systemModel.signal import Signal
+from systemModel.codebooks import CodebookSpec
 
 from experiments.store import Store, ExperimentPaths
-from experiments.dataset_factory import DatasetFactory, DatasetMode
-from experiments.noise_factory import NoiseFactory, NoiseMode
-
-from dataset.probability import Probability
-from reinforcement_learning.states import State
-from reinforcement_learning.env import Environment
-from reinforcement_learning.deep_q_learning.components.seed import set_seed
+from experiments.builder import ExperimentBuilder
 from experiments.runner import Runner
+
+from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
 def main():
     # Reproducibility
@@ -109,82 +100,25 @@ def main():
                                         
                                         ) # All the parameters stored in a class
 
-            # Physical system Setup
-
-            # The channel model
-            channel = Channel(
-                parameters
-            ) 
-            
-            # The transmitted signal
-            signal = Signal(
-                parameters
-            ) 
-            
-            # The codebook for the RIS
-            codebooks = Codebooks(
-                parameters
-            ) 
-
-            # The feedback function between the receiver and the transmitter
-            feedback = Feedback(
-                parameters,
-                channel,
-                codebooks,
-                signal
-                ) 
-
             paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
-            store = Store(
-                paths
-                )
 
-            dataset_factory = DatasetFactory()
-            dataset_proba, parameters, codebooks = dataset_factory.get_dataset(
-                dataset_mode=DatasetMode.GENERATE, 
-                store=store, 
-                parameters=parameters, 
-                channel=channel, 
-                codebooks=codebooks, 
-                feedback=feedback,
-                noisy_samples=True
-                )
+            store = Store(paths)
 
-            noise_factory = NoiseFactory()
-            noise_parameters = noise_factory.get_noise(
-                noise_mode=NoiseMode.ANALYTICAL, 
-                paths=paths.root,
-                feedback=feedback,
-                channel=channel, 
-                parameters=parameters, 
-                )
-
-            probability = Probability(
-                parameters, 
-                dataset_proba, 
-                noise_parameters
-                )
-
-            # States space 
-            states = State(
-                parameters
-                )
-
-            environment = Environment(
-                states=states,
-                parameters=parameters,
-                probability=probability,
-                dataset_train=dataset_proba,
-                dataset_test=dataset_proba
-                )
-
-            runner = Runner(
-                parameters= parameters,
-                environment= environment, 
-                store= store, 
-                probability= probability
-                )
+            print(f"\n[EXPERIMENT] root = {store.paths.root}")
+            print(f"[EXPERIMENT] dataset = {store.paths.dataset_pickle}")
+            print(f"[EXPERIMENT] noise   = {store.paths.noise_csv}\n")
             
+            # ----------------------------------- Build full pipeline --------------------------------
+
+            builder = ExperimentBuilder(
+                parameters= parameters,
+                store= store
+            )
+
+            runner = builder.build()
+
+            # -------------------------------------- Train / Test --------------------------------------
+
             # Train Q-Learning and get the policy
             q_policy = runner.run_q_learning()
 

@@ -1,11 +1,12 @@
 from enum import Enum
 from typing import Tuple
 
-from dataset.noise_calibration import fit_noise, load_fitted_noise
 from config.parameters import Parameters
+from experiments.store import Store   
 from systemModel.channel import Channel
 from systemModel.feedback import Feedback
-from experiments.store import ExperimentPaths   
+from dataset.noise_calibration import fit_noise
+
 
 class NoiseMode(str, Enum):
     """
@@ -23,12 +24,6 @@ class NoiseMode(str, Enum):
     FIT = "fit"
     REUSE = "reuse"
 
-class NoiseStore:
-    """ This class verifies if fitted noise parameters exist on the disk.
-    """
-    def __init__(self, paths: ExperimentPaths):
-        self.paths = paths
-
 class NoiseFactory:
     """ This class is responsible for constructing the noise model parameters associated with a given experiment configuration. 
     
@@ -40,11 +35,11 @@ class NoiseFactory:
     def get_noise_params(
         self,
         *,
+        parameters: Parameters,
         noise_mode: NoiseMode,
-        paths: ExperimentPaths,
+        store : Store,
         feedback: Feedback,
-        channel: Channel,
-        parameters: Parameters
+        channel: Channel
     ) -> Tuple[float, float]:
         """
         Return noise parameters according to the selected strategy.
@@ -65,11 +60,16 @@ class NoiseFactory:
             return (0.0, 0.01)
         
         elif noise_mode == NoiseMode.FIT:
-            mean, std = fit_noise(paths.root, feedback, channel, parameters) 
+            mean, std = fit_noise(store.paths.root, feedback, channel, parameters) 
             return (float(mean), float(std))
         
         elif noise_mode == NoiseMode.REUSE:
-            return load_fitted_noise(paths.root)
+            if not store.noise_exists():
+                raise FileNotFoundError(
+                    f"NoiseMode.REUSE selected but {store.paths.noise_csv} does not exist. "
+                    f"Run once with NoiseMode.FIT."
+                )
+            return store.load_noise()
         
         else:
             raise ValueError(f"Unsupported noise mode: {noise_mode}")

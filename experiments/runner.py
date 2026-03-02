@@ -1,8 +1,5 @@
 import os
-import csv
-import numpy as np
-import torch
-from typing import dict, Any
+from typing import Dict, Any
 
 from experiments.store import Store
 from config.parameters import Parameters
@@ -53,7 +50,7 @@ class Runner:
         return load_Policy(self.parameters.n_episodes, q_matrices_path)
     
     def run_deep_q_learning(self):
-        """This method initializes, trains and returns the policy for Q-Learning.
+        """This method initializes, trains and returns the policy for Deep Q-Learning.
         """
         if not self.parameters.Train_Deep_Q_Learning:
             print("[INFO] Skipping Deep Q-Learning training.")
@@ -86,8 +83,8 @@ class Runner:
         """
         return {
                 "parameters": self.parameters,
-                "channel": self.env.parameters, # Derived from Environment
-                "feedback": self.env.probability,
+                "channel": self.channel, # Derived from Environment
+                "feedback": self.feedback,
                 "probability": self.probability,
                 "states": self.env.state_space,
                 "filename": self.filename,
