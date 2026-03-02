@@ -86,10 +86,10 @@ class DeepQLearningAgent():
         
         # ---- Schedules ----
         self.epsilon_schedule = multiplicativeDecaySchedule(
-                                                            init_value = epsilon_init,
-                                                            decay = epsilon_decay,
-                                                            min_value = epsilon_min
-                                                            )
+            init_value = epsilon_init,
+            decay = epsilon_decay,
+            min_value = epsilon_min
+        )
         
         self.delta_schedule = multiplicativeDecaySchedule(
                                                             init_value = delta_init,

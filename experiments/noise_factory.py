@@ -23,9 +23,14 @@ class NoiseMode(str, Enum):
     FIT = "fit"
     REUSE = "reuse"
 
+class NoiseStore:
+    """ This class verifies if fitted noise parameters exist on the disk.
+    """
+    def __init__(self, paths: ExperimentPaths):
+        self.paths = paths
+
 class NoiseFactory:
-    """ This class is responsible for constructing the noise model parameters
-    associated with a given experiment configuration. 
+    """ This class is responsible for constructing the noise model parameters associated with a given experiment configuration. 
     
     The noise parameters has 3 options:
         . analytical noise, 
@@ -60,7 +65,8 @@ class NoiseFactory:
             return (0.0, 0.01)
         
         elif noise_mode == NoiseMode.FIT:
-            return fit_noise(paths.root, feedback, channel, parameters)
+            mean, std = fit_noise(paths.root, feedback, channel, parameters) 
+            return (float(mean), float(std))
         
         elif noise_mode == NoiseMode.REUSE:
             return load_fitted_noise(paths.root)

@@ -1,8 +1,12 @@
-import pickle
 from enum import Enum
+from typing import Tuple
 
-from experiments.store import ExperimentPaths
+from experiments.store import Store
 from dataset.monteCarlo import Dataset_probability
+from config.parameters import Parameters
+from systemModel.channel import Channel
+from systemModel.codebooks import Codebooks
+from systemModel.feedback import Feedback
 
 class DatasetMode(str, Enum):
     """ This mode defines how the dataset should be obtained for a given experiment.
@@ -11,31 +15,66 @@ class DatasetMode(str, Enum):
     ------
         GENERATE (str): Create a new dataset using the current experiment parameters and save it to the experiment directory. Use this mode when modifying channel/codebook parameters.
         
-        REUSE (str): Load an existing dataset from disk. Use this mode when Re-running training on the same data, performing additional evaluations to avoid expensive dataset regeneration.
+        REUSE (str): Load an existing dataset from disk. Use this mode when Re-running training on the same data to avoid expensive dataset regeneration.
     """
     GENERATE = "generate" 
     REUSE = "reuse"
 
 class DatasetFactory:
-    """ This class handles experiments dataset by : 
+    """ This class handles experiments dataset using the store by : 
 
         . Loading dataset from disk when DatasetMode.REUSE,
         . Generating dataset in memory when DatasetMode.GENERATE,
         . Saving generated dataset to the experiment folder.
     
     """
-    def load(self, *, paths: ExperimentPaths) -> Dataset_probability:
-        with open(paths.dataset_path, "rb") as f:
-            return pickle.load(f)
-        
-    def save(self, *, paths: ExperimentPaths, dataset: Dataset_probability) -> None:
-        with open(paths.dataset_path, "wb") as f:
-            pickle.dump(dataset, f, protocol= pickle.HIGHEST_PROTOCOL)
     
     def get_dataset(
             self,
             *,
             dataset_mode: DatasetMode,
-            paths: ExperimentPaths,
-            
-    ) -> Dataset_Probability
+            store: Store,
+            parameters: Parameters,
+            channel: Channel,
+            codebooks: Codebooks,
+            feedback: Feedback,
+            noisy_samples: bool = True
+        ) -> Tuple[Dataset_probability, Parameters, Codebooks]:
+        """ Main function responsible for returning the dataset for the experiment based on the specified mode.
+
+            Args:
+                dataset_mode (DatasetMode): The mode to determine how to obtain the dataset (GENERATE or REUSE).
+                store (Store): The store instance to handle dataset loading and saving.
+                parameters (Parameters): The experiment parameters.
+                channel (Channel): The channel model for dataset generation.
+                codebooks (Codebooks): The codebooks used in the experiment.
+                feedback (Feedback): The feedback mechanism for dataset generation.
+                noisy_samples (bool, optional): Whether to include noise in the generated samples. Defaults to True.
+                
+        ) -> Dataset_Probability
+        """
+        if dataset_mode == DatasetMode.REUSE:
+            if not store.dataset_exists():
+                raise FileNotFoundError(f"No dataset found for reuse at {store.paths.dataset_pickle}. Please use a DatasetMode.GENERATE first.")
+        
+            print(f"[INFO] Reusing dataset from {store.paths.dataset_pickle}")
+            dataset = store.load_dataset()
+
+            stored_parameters, stored_codebooks = dataset.get_params_codebook()
+
+            return dataset, stored_parameters, stored_codebooks
+
+        if dataset_mode == DatasetMode.GENERATE:
+            print("[INFO] Generating new dataset")
+            dataset = Dataset_probability(
+                parameters = parameters, 
+                channel = channel, 
+                codebooks = codebooks, 
+                feedback = feedback, 
+                Noisy_samples= noisy_samples,
+                filename = store.paths.root
+                )
+            store.save_dataset(dataset)
+            print(f"[INFO] Dataset saved to {store.paths.dataset_pickle}")
+
+            return dataset, parameters, codebooks

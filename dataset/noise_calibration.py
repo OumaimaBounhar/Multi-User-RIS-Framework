@@ -6,14 +6,6 @@ import matplotlib.pyplot as plt
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
 
-def load_fitted_noise(filename:str):
-    file = filename + "/Noise_parameters.csv"
-    csv_noise = pd.read_csv(file)
-    Noise_parameters = csv_noise.to_numpy()[:,1:]
-    return Noise_parameters[0].item(), Noise_parameters[1].item()
-
-################################################################################
-
 def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
     print("Fitting real noise to Gaussian noise")
 

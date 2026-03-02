@@ -1,296 +1,199 @@
 import numpy as np
-import pickle
-import csv
-import os
 
 from config.parameters import Parameters
-
-from dataset.monteCarlo import Dataset_probability
-from dataset.probability import Probability
-from dataset.noise_calibration import fit_noise, load_fitted_noise
-
-from systemModel.codebooks import CodebookSpec
-from systemModel.codebooks import Codebooks
+from systemModel.codebooks import CodebookSpec, Codebooks
 from systemModel.channel import Channel
 from systemModel.feedback import Feedback
 from systemModel.signal import Signal
 
-from methods.test import Test
-from methods.methods import Methods
+from experiments.store import Store, ExperimentPaths
+from experiments.dataset_factory import DatasetFactory, DatasetMode
+from experiments.noise_factory import NoiseFactory, NoiseMode
 
-from reinforcement_learning.env import Environment
+from dataset.probability import Probability
 from reinforcement_learning.states import State
-
-from reinforcement_learning.q_learning.agent import QLearningAgent
-from reinforcement_learning.q_learning.utils import load_Policy
-
-from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
+from reinforcement_learning.env import Environment
 from reinforcement_learning.deep_q_learning.components.seed import set_seed
+from experiments.runner import Runner
 
+def main():
+    # Reproducibility
+    set_seed(42)
 
-########################################################################### 
-########################## Instantiate Objects ############################
-###########################################################################
+    all_size_of_codebooks = [
+                                [8, 14],
+                                # [16, 30],
+                                # [32, 62],
+                                # [64, 126]
+                            ]
 
-all_size_of_codebooks = [
-                            [8, 14],
-                            # [16, 30],
-                            # [32, 62],
-                            # [64, 126]
+    all_codebook_specs = [
+                            [CodebookSpec(kind="narrow", N=8),
+                            CodebookSpec(kind="hierarchical", K=3, M=2)],
+                            # [CodebookSpec(kind="narrow", N=16),
+                            #  CodebookSpec(kind="hierarchical", K=4, M=2)],
                         ]
 
-all_codebook_specs = [
-                        [CodebookSpec(kind="narrow", N=8),
-                        CodebookSpec(kind="hierarchical", K=3, M=2)],
-                        # [CodebookSpec(kind="narrow", N=16),
-                        #  CodebookSpec(kind="hierarchical", K=4, M=2)],
+    delta_values = [
+                    # 3e-1,
+                    # 2e-1,
+                    1e-2,
+                    # 2e-2
                     ]
 
-delta_values = [
-                # 3e-1,
-                # 2e-1,
-                1e-2,
-                # 2e-2
-                ]
+    for size_codebooks, codebook_specs in zip(all_size_of_codebooks, all_codebook_specs):
+        for delta in delta_values:
+            print("="*80)
+            print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
+            print("="*80)
 
-for size_codebooks, codebook_specs in zip(all_size_of_codebooks, all_codebook_specs):
-    for delta in delta_values:
-        print("="*80)
-        print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
-        print("="*80)
+            parameters = Parameters(    N_R=64, 
+                                        N_T=1, 
+                                        N_RIS=100, 
+                                        size_codebooks=size_codebooks, 
+                                        codebook_specs=codebook_specs,
+                                        mean_noise=0,
+                                        SNR=10,
+                                        # snr_values = [0,5,10,20],
+                                        snr_values = [20],
+                                        modification_channel=0,
+                                        type_channel="half-spaced ULAs",
+                                        type_modulation="BPSK", 
+                                        mean_channel=0, 
+                                        std_channel=[], 
+                                        sigma_alpha=0, 
+                                        gamma=0.94,
+                                        learning_rate_init=5e-5,
+                                        params_list=[256,256],
+                                        batch_size=1024,
+                                        replay_buffer_memory_size=120000,
+                                        max_norm=0.5,
+                                        do_gradient_clipping = True,
+                                        loss_fct='mse',
+                                        n_epochs=10000,
+                                        # n_epochs = 5,
+                                        n_time_steps_dqn=64,
+                                        n_channels_train_DQN=5,
+                                        # n_channels_train_DQN=1,
+                                        freq_update_target=20,
+                                        tau = 0.05,
+                                        max_len_path=20,
+                                        epsilon=1,
+                                        epsilon_decay=0.992,
+                                        epsilon_min=0.01,
+                                        delta_init=delta,
+                                        delta_decay=1,
+                                        train_or_test=True,
+                                        Train_Deep_Q_Learning=True,
+                                        saving_freq_DQN=500,
+                                        # saving_freq_DQN=1,
+                                        test_freq_DQN=1,
+                                        Train_Q_Learning=True,
+                                        n_episodes=10000,
+                                        # n_episodes=5,
+                                        n_time_steps_ql=64,
+                                        n_channels_train_QL=5,
+                                        len_path=20,
+                                        saving_freq_QL = 500,
+                                        # saving_freq_QL = 1,
+                                        test_freq_QL = 1,
+                                        delta_final=5e-2, 
+                                        len_window_action=1, 
+                                        len_window_channel=10, 
+                                        precision=2,  
+                                        blabla_other_states=1, 
+                                        min_representatives_q_learning_train=100, 
+                                        min_representatives_q_learning_test=10,
+                                        learning_rate_decay = 0.99,
+                                        learning_rate_min = 1e-4
+                                        
+                                        ) # All the parameters stored in a class
 
-        parameters = Parameters(    N_R=64, 
-                                    N_T=1, 
-                                    N_RIS=100, 
-                                    size_codebooks=size_codebooks, 
-                                    codebook_specs=codebook_specs,
-                                    mean_noise=0,
-                                    SNR=10,
-                                    # snr_values = [0,5,10,20],
-                                    snr_values = [20],
-                                    modification_channel=0,
-                                    type_channel="half-spaced ULAs",
-                                    type_modulation="BPSK", 
-                                    mean_channel=0, 
-                                    std_channel=[], 
-                                    sigma_alpha=0, 
-                                    gamma=0.94,
-                                    learning_rate_init=5e-5,
-                                    params_list=[256,256],
-                                    batch_size=1024,
-                                    replay_buffer_memory_size=120000,
-                                    max_norm=0.5,
-                                    do_gradient_clipping = True,
-                                    loss_fct='mse',
-                                    n_epochs=10000,
-                                    # n_epochs = 5,
-                                    n_time_steps_dqn=64,
-                                    n_channels_train_DQN=5,
-                                    # n_channels_train_DQN=1,
-                                    freq_update_target=20,
-                                    tau = 0.05,
-                                    max_len_path=20,
-                                    epsilon=1,
-                                    epsilon_decay=0.992,
-                                    epsilon_min=0.01,
-                                    delta_init=delta,
-                                    delta_decay=1,
-                                    train_or_test=True,
-                                    Train_Deep_Q_Learning=True,
-                                    saving_freq_DQN=500,
-                                    # saving_freq_DQN=1,
-                                    test_freq_DQN=1,
-                                    Train_Q_Learning=True,
-                                    n_episodes=10000,
-                                    # n_episodes=5,
-                                    n_time_steps_ql=64,
-                                    n_channels_train_QL=5,
-                                    len_path=20,
-                                    saving_freq_QL = 500,
-                                    # saving_freq_QL = 1,
-                                    test_freq_QL = 1,
-                                    delta_final=5e-2, 
-                                    len_window_action=1, 
-                                    len_window_channel=10, 
-                                    precision=2,  
-                                    blabla_other_states=1, 
-                                    min_representatives_q_learning_train=100, 
-                                    min_representatives_q_learning_test=10,
-                                    learning_rate_decay = 0.99,
-                                    learning_rate_min = 1e-4
-                                    
-                                    ) # All the parameters stored in a class
+            # Physical system Setup
 
-        channel = Channel(parameters) # The channel model
-
-        signal = Signal(parameters) # The signal sent
-
-        codebooks = Codebooks(parameters) # The codebook for the RIS
-
-        feedback = Feedback(parameters,
-                            channel,
-                            codebooks,
-                            signal) # The feedback function between the receiver and the transmitter
-
-        ##########################################
-        ############## Saved Data  ###############
-        ##########################################
-
-        ### To decide if we reuse the dataset already generated or create a new one ###
-        # number_exp = str(input("Where do you want to save the file? (number): "))
-
-        #old_xp_names = os.listdir('/home/infres/obounhar-23/ris/Code/RIS/RIS/Data/')
-
-        old_xp_names = os.listdir('./Data/')
-
-        indices = [int(xp_name.split('_')[1]) for xp_name in old_xp_names]
-
-        number_exp = max(indices) + 1
-        print(f'using number_exp: {number_exp}')
-
-        filename = "./Data/Example_{}".format(number_exp)  ## Name of the file where the dataset was saved
-        if not os.path.exists(filename):
-            os.makedirs(filename)
+            # The channel model
+            channel = Channel(
+                parameters
+            ) 
             
-        analytical_expression_noise = True # If the Real noise of the data has a known expression
-        Noisy_samples = True # If the samples from the dataset are noisy
-
-        new_fit_noise = False ## Fit the real noise onto gaussian noise
-        new_dataset = True ## New dataset if True else take the one saved in filename
-
-        ### For the noise we load if already fitted ###
-        ### Fitting is quick ###
-        if analytical_expression_noise:
-            print("analytical_expression Not done")
-            params_modeled_noise = 0,0.01
-        elif not new_fit_noise:
-            params_modeled_noise = load_fitted_noise(filename)
-        else:
-            params_modeled_noise = fit_noise(filename,feedback,channel,parameters)
+            # The transmitted signal
+            signal = Signal(
+                parameters
+            ) 
             
-        ## Creating a dataset takes time ###
-        ## We reuse exactly the parameters used to generate the dataset
-        if not new_dataset:
-            dataset_proba  = pickle.load(open(filename+"/Dataset.pickle", "rb", -1))
-            parameters,codebooks = dataset_proba.get_params_codebook()
-            feedback = Feedback(parameters,channel,codebooks,signal)
-        else: 
-            dataset_proba = Dataset_probability(parameters,
-                                                channel,
-                                                codebooks,
-                                                feedback,
-                                                Noisy_samples=Noisy_samples,
-                                                filename=filename)
+            # The codebook for the RIS
+            codebooks = Codebooks(
+                parameters
+            ) 
+
+            # The feedback function between the receiver and the transmitter
+            feedback = Feedback(
+                parameters,
+                channel,
+                codebooks,
+                signal
+                ) 
+
+            paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
+            store = Store(
+                paths
+                )
+
+            dataset_factory = DatasetFactory()
+            dataset_proba, parameters, codebooks = dataset_factory.get_dataset(
+                dataset_mode=DatasetMode.GENERATE, 
+                store=store, 
+                parameters=parameters, 
+                channel=channel, 
+                codebooks=codebooks, 
+                feedback=feedback,
+                noisy_samples=True
+                )
+
+            noise_factory = NoiseFactory()
+            noise_parameters = noise_factory.get_noise(
+                noise_mode=NoiseMode.ANALYTICAL, 
+                paths=paths.root,
+                feedback=feedback,
+                channel=channel, 
+                parameters=parameters, 
+                )
+
+            probability = Probability(
+                parameters, 
+                dataset_proba, 
+                noise_parameters
+                )
+
+            # States space 
+            states = State(
+                parameters
+                )
+
+            environment = Environment(
+                states=states,
+                parameters=parameters,
+                probability=probability,
+                dataset_train=dataset_proba,
+                dataset_test=dataset_proba
+                )
+
+            runner = Runner(
+                parameters= parameters,
+                environment= environment, 
+                store= store, 
+                probability= probability
+                )
             
-        probability = Probability(  parameters,
-                                    dataset_proba,
-                                    params_modeled_noise) ## The probability we will use later
+            # Train Q-Learning and get the policy
+            q_policy = runner.run_q_learning()
 
-        ########################################################################### 
-        ############################## Q-Learning ################################# 
-        ###########################################################################
-        q_learning_parameters = parameters.get_q_learning_parameters()
-
-        # States space 
-        states = State(parameters)
-
-        if parameters.Train_Q_Learning:
-            # Environment initialization
-            dataset_Q_learning_train = dataset_proba
-                    
-            dataset_Q_learning_test = dataset_Q_learning_train
-
-            environment = Environment(  states,
-                                        parameters, 
-                                        probability,
-                                        dataset_Q_learning_train,
-                                        dataset_Q_learning_test)
-
-            # Q-Learning Agent
-            agent = QLearningAgent( environment=environment,
-                                    parameters = parameters,
-                                    name_file=filename+"/Q_matrices")
-
-            # Start training
-            agent.train(params_dict = q_learning_parameters)
+            # Train Deep Q-Learning and get the policy
+            dqn_agent, dqn_policy = runner.run_deep_q_learning()
             
-        Policy = load_Policy(parameters.n_episodes,filename+"/Q_matrices")
+            runner.run_testing(q_policy, dqn_agent, dqn_policy)
 
-        # name = filename+f"/Q_matrices/frequency_after_{parameters.n_episodes}episodes.csv"
-        name = filename+f"/Q_matrices/frequency_after_{parameters.n_episodes}episodes_with_delta_=_{parameters.delta_init}_and_alpha=_{parameters.learning_rate_init}.csv"
+            print(f"[INFO] Simulation for Example_{paths.root.split('_')[-1]} Completed.")
 
-        with open(name, mode='r') as file:
-            reader = csv.reader(file)
-            #Policy = [[int(item) for item in row] for row in reader]
-            freq = [float(row[0]) for row in reader]
-        print([states.get_state_from_index((np.argsort(np.array(freq))[::-1])[i])for i in range(0,10)])
-
-        methods = Methods(  parameters,
-                            channel,
-                            feedback,
-                            probability,
-                            states,
-                            Policy)
-
-        other_params = methods.get_parameters()
-
-        len_window_channel = other_params["len_window_channel"]
-        len_window_action = other_params["len_window_action"]
-        Hierarchical_possible = other_params["Hierarchical_possible"]
-        Policy = other_params["Policy_Q"]
-        modification_channel = parameters.modification_channel
-
-        testing_objects_dict = {
-            "parameters": parameters,
-            "channel": channel,
-            "feedback": feedback,
-            "probability": probability,
-            "states": states,
-            "filename" : filename,
-            "len_window_channel": len_window_channel,
-            "len_window_action": len_window_action,
-            "Hierarchical_possible": Hierarchical_possible,
-            "Policy_Q": Policy,
-            "modification_channel" : modification_channel,
-            "snr_values" : parameters.snr_values
-        }
-
-        ###########################################################################
-        ############################## Deep-Q-Learning ############################
-        ###########################################################################
-
-        dqn_parameters = parameters.get_dqn_parameters()
-
-        if parameters.Train_Deep_Q_Learning:
-            
-            #input_dims = environment.state_space.get_n_states() # Non c'est pas la taille du state space, c'est la taille des éléments du state space
-            input_dims = environment.get_size_states() #The dimension of inputs for the Deep Neural network
-            
-            # Deep-Q-Learning Agent
-            agent = DeepQLearningAgent( input_dims = input_dims, 
-                                        environment =  environment,
-                                        parameters= parameters,
-                                        name_file = filename
-                                    )
-
-            # Start training
-            Policy_network = agent.train(params_dict = dqn_parameters, testing_objects_dict = testing_objects_dict)
-
-        Policy_network.eval()
-
-        ########################################################################### 
-        ########################## Start Simulation ############################### 
-        ###########################################################################
-
-        test_model = Test(  parameters,
-                            methods,
-                            channel,
-                            probability,
-                            agent)
-        # Directory where the checkpoints are saved
-        checkpoints_dir_ql = f"{filename}/Q_matrices"
-        checkpoints_dir_dql = f"{filename}/checkpoints"
-        print(filename)
-
-        # Run the tests
-        test_model.test_saved_models(testing_objects_dict, checkpoints_dir_ql, checkpoints_dir_dql)
+if __name__ == "__main__":
+    main()
