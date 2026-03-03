@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 from reinforcement_learning.env import Environment
 from config.parameters import Parameters
-from reinforcement_learning.q_learning.utils import extract_Policy, computes_percentage_unvisited_states, plot_Convergence,  save_policy, save_Q_matrix, save_frequency_update_per_state, save_training_metrics
+from reinforcement_learning.q_learning.utils import extract_Policy, computes_percentage_unvisited_states, plot_Convergence,  save_Policy_matrix, save_Q_matrix, save_frequency_update_per_state, save_training_metrics
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule, LinearDecaySchedule
 
 class QLearningAgent():
@@ -207,12 +207,12 @@ class QLearningAgent():
                 policy = extract_Policy(self.Q_matrix)
 
                 # Save policy
-                save_policy(policy, episode, self.name)
+                save_Policy_matrix(policy, episode, self.name)
         
         print("[INFO] Q-Learning Training : Process Completed !")
         
         # ---- Final save ----
-        save_policy(self.n_episodes,self.name)
+        save_Policy_matrix(self.n_episodes,self.name)
         save_Q_matrix(self.n_episodes,self.name)
         
         save_frequency_update_per_state(self.Q_matrix_freq, self.name, self.n_episodes, self.delta_schedule.init_value, self.learning_rate_schedule.init_value)

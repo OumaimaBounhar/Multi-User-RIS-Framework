@@ -34,7 +34,7 @@ class Runner:
             return None
         
         print("[INFO] Starting Q-Learning Training...")
-        q_matrices_path = os.path.join(self.filename, "Q_matrices")
+        q_matrices_path = self.store.paths.q_matrices_dir
         os.makedirs(q_matrices_path, exist_ok=True)
 
         agent = QLearningAgent(
@@ -43,11 +43,13 @@ class Runner:
             name_file=q_matrices_path
         )
 
-        q_learning_params = self.parameters.get_q_learning_parameters()
-        agent.train(params_dict = q_learning_params)
+        agent.train()
         
         # Load the newly trained policy
-        return load_Policy(self.parameters.n_episodes, q_matrices_path)
+        return load_Policy(
+            self.store.paths,
+            self.parameters.n_episodes
+        )
     
     def run_deep_q_learning(self):
         """This method initializes, trains and returns the policy for Deep Q-Learning.
@@ -58,22 +60,17 @@ class Runner:
 
         print("[INFO] Starting Deep Q-Learning Training...")
 
-        dqn_params = self.parameters.get_dqn_parameters()
-        testing_objects_dict = self._build_testing_objects_dict()
         input_dims = self.env.get_size_states()
 
         agent = DeepQLearningAgent(
             input_dims = input_dims,
             environment = self.env,
             parameters = self.parameters,
-            name_file = self.filename
+            paths = self.store.paths
         )
 
         # Returns the trained network
-        policy_network = agent.train(
-            params_dict = dqn_params, 
-            testing_objects_dict = testing_objects_dict
-        )
+        policy_network = agent.train()
         
         policy_network.eval()
         return agent, policy_network
@@ -124,11 +121,8 @@ class Runner:
         )
 
         # 4. Execute the multi-SNR testing suite
-        checkpoints_dir_ql = os.path.join(self.filename, "Q_matrices")
-        checkpoints_dir_dql = os.path.join(self.filename, "checkpoints")
-
         tester.test_saved_models(
             testing_objects_dict=testing_objects_dict,
-            checkpoints_dir_ql=checkpoints_dir_ql,
-            checkpoints_dir_dql=checkpoints_dir_dql
+            checkpoints_dir_ql=self.store.paths.q_matrices_dir,
+            checkpoints_dir_dql=self.store.paths.dqn_checkpoints_dir
         )

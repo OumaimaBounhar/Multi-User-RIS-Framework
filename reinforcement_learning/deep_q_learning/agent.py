@@ -1,18 +1,16 @@
+import torch
 import numpy as np 
 from tqdm import tqdm
-
-import os
-import torch
-import torch.nn as nn
-
 from config.parameters import Parameters
 from reinforcement_learning.env import Environment 
+from experiments.store import ExperimentPaths
+
 from reinforcement_learning.deep_q_learning.components.network import DQN
 from reinforcement_learning.deep_q_learning.components.replay_buffer import ReplayBuffer
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule
 
 from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_learn_update_step, dqn_target_update
-from reinforcement_learning.deep_q_learning.utils import save_model_checkpoints, save_last_models, plot_Convergence, save_Data
+from reinforcement_learning.deep_q_learning.utils import save_dqn_weights, plot_Convergence, save_Data
 
 
 class DeepQLearningAgent():
@@ -22,20 +20,37 @@ class DeepQLearningAgent():
                     input_dims: int, #we input the state index
                     environment : Environment,
                     parameters: Parameters,
-                    name_file:str="Data/Example_0/DQN"
+                    paths: ExperimentPaths
                 ):
         
         self.simu_parameters = parameters
-        self.name = name_file
         self.environment = environment
+        self.paths = paths
         self.input_dims = self.environment.get_size_states()
         self.n_states = self.environment.state_space.get_n_states()
         self.n_actions = self.environment.get_size_codebook()[1]
         
         ## Parameters
         params_dict = self.simu_parameters.get_dqn_parameters()
+        
+        self.n_epochs = params_dict["n_epochs"]
+        self.saving_freq = params_dict["saving_freq"]
+        
+        self.batch_size = params_dict["batch_size"]
+        
+        self.n_channels_train = params_dict["n_channels_train"]
+        self.n_time_steps = params_dict["n_time_steps"]
+        self.max_len_path = params_dict["max_len_path"]
+        
+        self.freq_update_target = params_dict["freq_update_target"]
+        self.tau = params_dict["tau"]
+        self.targetNet_update_method = params_dict["targetNet_update_method"]
+
+        self.gamma = params_dict["gamma"]
+        self.max_norm = params_dict["max_norm"]
+        self.do_gradient_clipping = params_dict["do_gradient_clipping"]
+
         learning_rate = params_dict["learning_rate_init"]
-        batch_size = params_dict["batch_size"]
         replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
         epsilon_init = params_dict["epsilon_init"]
         epsilon_decay = params_dict["epsilon_decay"]
@@ -43,8 +58,9 @@ class DeepQLearningAgent():
         delta_init = params_dict["delta_init"]
         delta_decay = params_dict["delta_decay"]
         delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
-        targetNet_update_method = params_dict["targetNet_update_method"]
         
+        self.saving_freq = params_dict["saving_freq"]
+
         self.update_step = 0 # Count how many gradients have been performed
 
         # ---- Dataset ----
@@ -81,8 +97,8 @@ class DeepQLearningAgent():
         # ---- Replay Buffer ----
         self.replay_buffer = ReplayBuffer(
                                             replay_buffer_memory_size,
-                                            batch_size, 
-                                            input_dims)
+                                            self.batch_size, 
+                                            self.input_dims)
         
         # ---- Schedules ----
         self.epsilon_schedule = multiplicativeDecaySchedule(
@@ -121,7 +137,7 @@ class DeepQLearningAgent():
                 action = torch.argmax(q_values).item()
         return action
     
-    def train_one_epoch(self, epsilon: float, params_dict={}):
+    def train_one_epoch(self, epsilon: float):
         """ 
         Run one training epoch
         =======
@@ -129,33 +145,19 @@ class DeepQLearningAgent():
         =======
         @ epsilon : for the Epsilon Greedy Policy
         @ delta: for the stopping criteria
-        @ params_dict: access to dictionary for needed parameters
 
         Returns:
         @ avg_loss : the average of the loss during the training
         @ avg_len_path : the average length of path after all the channel realization
         @ n_updates : the amount of times the Target Network has been updated 
         """
-        batch_size = params_dict["batch_size"]
-        
-        n_channels_train = params_dict["n_channels_train"]
-        n_time_steps = params_dict["n_time_steps"]
-        max_len_path = params_dict["max_len_path"]
-        
-        freq_update_target = params_dict["freq_update_target"]
-        tau = params_dict["tau"]
-        targetNet_update_method = params_dict["targetNet_update_method"]
-
-        gamma = params_dict["gamma"]
-        max_norm = params_dict["max_norm"]
-        do_gradient_clipping = params_dict["do_gradient_clipping"]
         
         epoch_losses = []
         epoch_path_lengths = []
 
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
 
-        for channel_realization in range(n_channels_train):
+        for _ in range(self.n_channels_train):
                 
                 ## Always start from the initial state
                 current_state = self.environment.state_space.get_state_from_index(0) 
@@ -172,14 +174,14 @@ class DeepQLearningAgent():
 
                 #---------------------------------------- Loop over time steps --------------------------------------------------
 
-                for _ in range(n_time_steps):
+                for _ in range(self.n_time_steps):
                     
                     ## Track path length as number of actions are taken to measure how efficient the policy is
                     path_len = 0 
                 
                     #---------------------------------------- Loop until reaching the maximum length of path allowed --------------------------------------------------
 
-                    for path in range(max_len_path):
+                    for path in range(self.max_len_path):
 
                         # Reset the curse of dimension : reset the list of samples and put prior = posterior
                         if path % len_window_channel == 0:
@@ -199,7 +201,7 @@ class DeepQLearningAgent():
                         path_len += 1
 
                         # Setting the Gymnasium-style step.
-                        time_limit_reached = (path == max_len_path - 1)
+                        time_limit_reached = (path == self.max_len_path - 1)
                         truncated = (time_limit_reached and not terminated)
 
                         done = terminated or truncated
@@ -214,7 +216,7 @@ class DeepQLearningAgent():
                     epoch_path_lengths.append(path_len)
                     
                     #------------------- Learning step (only if the buffer has enough samples) ------------------
-                    if self.replay_buffer.memory_counter >= batch_size:
+                    if self.replay_buffer.memory_counter >= self.batch_size:
                         # Sample a batch from the Replay Buffer
                         current_state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.replay_buffer.sample_buffer()
                         
@@ -228,30 +230,30 @@ class DeepQLearningAgent():
                                                             reward_batch, 
                                                             next_state_batch,
                                                             done_batch,
-                                                            gamma, 
-                                                            do_gradient_clipping, 
-                                                            max_norm )
+                                                            self.gamma, 
+                                                            self.do_gradient_clipping, 
+                                                            self.max_norm )
                         epoch_losses.append(loss_value)
 
                         self.update_step += 1
 
                         #------------------- Target network update (frequency in gradient steps) ------------------
-                        if targetNet_update_method.lower() == "soft": 
+                        if self.targetNet_update_method.lower() == "soft": 
                             # tau is typically small : 1e-3 to 5e-3 (sometimes 1e-2). Soft update is already “gentle”. Doing it every step is standard and stable.
                             dqn_target_update(
                                                 self.evaluation_q_network, 
                                                 self.target_q_network, 
-                                                tau, 
-                                                targetNet_update_method
+                                                self.tau, 
+                                                self.targetNet_update_method
                                                 )
 
-                        if targetNet_update_method.lower() == "hard": 
-                            if self.update_step % freq_update_target == 0:
+                        if self.targetNet_update_method.lower() == "hard": 
+                            if self.update_step % self.freq_update_target == 0:
                                 dqn_target_update(
                                                     self.evaluation_q_network, 
                                                     self.target_q_network, 
-                                                    tau, 
-                                                    targetNet_update_method
+                                                    self.tau, 
+                                                    self.targetNet_update_method
                                                 )
         return {
             "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
@@ -260,12 +262,10 @@ class DeepQLearningAgent():
         }
                 
     
-    def train(self, params_dict = {}, testing_objects_dict = {}):
+    def train(self):
         """" 
         Train the Deep Q-Learning Network 
         """
-        n_epochs = params_dict["n_epochs"]
-        saving_freq = params_dict["saving_freq"]
 
         # Reset the values of epsilon and delta
         self.epsilon_schedule.reset()
@@ -283,12 +283,11 @@ class DeepQLearningAgent():
 
         #---------------------------------------- Loop over epochs --------------------------------------------------
 
-        for epoch in tqdm(range(n_epochs)):
+        for epoch in tqdm(range(self.n_epochs)):
             
             one_epoch_metrics = self.train_one_epoch(
-                                                        epsilon= epsilon,
-                                                        params_dict= params_dict
-                                                    )
+                epsilon= epsilon
+            )
             
             avg_losses.append(one_epoch_metrics["avg_loss"])
             avg_len_path.append(one_epoch_metrics["avg_len_path"])
@@ -296,8 +295,8 @@ class DeepQLearningAgent():
 
             tqdm.write(
                         f"Epoch {epoch}:" 
-                        f"Loss = {one_epoch_metrics["avg_loss"]:.6f}, "
-                        f"Avg Path = {one_epoch_metrics["avg_len_path"]:.2f}, "
+                        f"Loss = {one_epoch_metrics['avg_loss']:.6f}, "
+                        f"Avg Path = {one_epoch_metrics['avg_len_path']:.2f}, "
                         f"Epsilon = {epsilon:.3f}, "
                         f"Delta = {delta: .4e}"
                     )
@@ -317,22 +316,28 @@ class DeepQLearningAgent():
             print(f'[INFO] Delta value updated in agent : delta_agent = {delta}')
             print(f'[INFO] Delta value updated in environment : delta_env = {self.environment.get_delta_current()}')
         
-        # save the model checkpoints
-        if epoch % saving_freq == 0:
-            save_model_checkpoints(self.name, epoch, self.evaluation_q_network, self.target_q_network)
+            # save the model checkpoints
+            if epoch % self.saving_freq == 0:
+                save_dqn_weights(
+                    self.paths, 
+                    epoch, 
+                    self.evaluation_q_network, 
+                    self.target_q_network
+                )
 
-        save_last_models(
-                            self.name, 
-                            self.evaluation_q_network, 
-                            self.target_q_network
-                            )
+        # save the model checkpoints for the last epoch
+        save_dqn_weights(
+            self.paths, 
+            "last", 
+            self.evaluation_q_network, 
+            self.target_q_network
+        )
 
         # Save the records of average losses, length of path and epsilon
-        save_Data(self.name, avg_losses, avg_len_path, epsilons)
+        save_Data(self.paths.root, avg_losses, avg_len_path, epsilons)
 
         # Plot the convergence of the algorithm
-        plot_Convergence(self.name, avg_losses, avg_len_path)
-
+        plot_Convergence(self.paths.root, avg_losses, avg_len_path)
         # The NN trained is a function that must find the optimal policy
         return self.evaluation_q_network
         

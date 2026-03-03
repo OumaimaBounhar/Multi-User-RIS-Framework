@@ -1,9 +1,9 @@
-import os
-import csv
+import os, csv
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from typing import List
+import matplotlib.pyplot as plt
+from experiments.store import ExperimentPaths
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
 
@@ -44,69 +44,66 @@ def computes_percentage_unvisited_states(Q_matrix_freq) -> float:
 
 #---------------------------------------- Visualization  ------------------------------------------------------------------------------
 
-def plot_Convergence(name, smoothed_avg_len):
+def plot_Convergence(paths: ExperimentPaths, smoothed_avg_len):
     """Plot the convergence of the Q-Learning Algorithm
 
     Args:
-        name (_type_): _description_
-        smoothed_avg_len (_type_): _description_
+        paths (ExperimentPaths): The paths of the experiment
+        smoothed_avg_len (nd_array): The smoothed average length of the path during training
     """
+    plt.figure()
     plt.plot(smoothed_avg_len)
     plt.title("Convergence of Q-Learning Algorithm")
     plt.xlabel("Iteration")
-    plt.ylabel("Average Len path normalized with a window size = 10")
-    plt.savefig(name + "/convergence_q_learning_train.png")
+    plt.ylabel("Average Len path normalized (window=10)")
+    
+    filename = paths.ql_convergence_plot_file
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    plt.savefig(filename)
+    plt.close()
 
 #---------------------------------------- Reporting ------------------------------------------------------------------------------
 
-def save_Q_matrix(Q_matrix, episode: int,name:str) -> None:
+def save_Q_matrix(paths: ExperimentPaths, Q_matrix, episode: int) -> None:
     """" Saves the Q-Learning matrix in a csv file
     Args : 
+        paths : The paths of the experiment
+        Q_matrix : The Q-matrix to save
         episode : The index of the episode
-    Returns :
-        A csv file
     """
     # Ensure the directory exists
-    os.makedirs(name, exist_ok=True)
-    
-    # Save the Q-matrix as a CSV file
-    filename = name + f"/Q_matrix_after_{episode}episodes.csv"
+    filename = paths.q_matrix_file(episode)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     np.savetxt(filename, Q_matrix, delimiter=",", fmt='%.6f')
-    
     print(f"[INFO] Q-matrix saved to {filename}")
     
-def save_policy(policy, episode: int,name:str) -> None:
-    """" Saves the Q-Learning matrix in a csv file
+def save_Policy_matrix(paths: ExperimentPaths, policy, episode: int) -> None:
+    """" Saves the Policy matrix in a csv file
     Args : 
+        paths : The paths of the experiment
+        policy : The policy to save
         episode : The index of the episode
-    Returns :
-        A csv file
     """
     # Save the policy matrix to a CSV file
-    filename_policy = name + f"/policy_after_{episode}episodes.csv"
+    filename_policy = paths.policy_matrix_file(episode)
+    os.makedirs(os.path.dirname(filename_policy), exist_ok=True)
     np.savetxt(filename_policy, policy, delimiter=",", fmt='%d')
-    print(f"[INFO] Policy saved to {filename_policy }")
+    print(f"[INFO] Policy saved to {filename_policy}")
 
-def save_frequency_update_per_state(Q_matrix_freq, name, n_episodes, delta_init, learning_rate_init) -> None:
+def save_frequency_update_per_state(paths: ExperimentPaths, Q_matrix_freq, n_episodes, delta_init, learning_rate_init) -> None:
     """
     Save the percentage of visits per state.
     """
-
     # Avoid division by zero
     total_updates = max(np.sum(Q_matrix_freq), 1)
     frequency_percent = Q_matrix_freq / total_updates * 100
 
-    filename = (
-        f"{name}/frequency_after_{n_episodes}"
-        f"_episodes_delta_{delta_init}"
-        f"_alpha_{learning_rate_init}.csv"
-    )
-
+    filename = paths.ql_frequency_matrix_file(n_episodes, delta_init, learning_rate_init)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     np.savetxt(filename, frequency_percent, delimiter=",")
-
     print(f"[INFO] Frequency matrix saved to {filename}")
 
-def save_training_metrics(name, avg_len_train_epoch: list) -> None:
+def save_training_metrics(paths: ExperimentPaths, avg_len_train_epoch: list) -> None:
     """
     Save training metrics (average path length per episode).
     """
@@ -115,38 +112,39 @@ def save_training_metrics(name, avg_len_train_epoch: list) -> None:
         "Len Train": avg_len_train_epoch
     })
 
-    filename = f"{name}/Data_len_path_training.dat"
+    filename = paths.ql_training_metrics_file
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     output_df.to_csv(filename, index=False)
-
     print(f"[INFO] Mean len path during QL - Training saved to {filename}")
 
-def load_Q_matrix(n_episodes: int,name:str) -> List[List[float]]:
+def load_Q_matrix(paths: ExperimentPaths, episode: int) -> List[List[float]]:
     """Loads the Q-matrix from a CSV file and returns it.
     
     Args:
-        n_episodes (int): Number of episodes.
+        paths (ExperimentPaths): The paths of the experiment
+        episode (int): The episode number.
     
     Returns:
         list: List of lists representing the Q-matrix.
     """
-    filename = name+f"/Q_matrix_after_{n_episodes}episodes.csv"
+    filename = paths.q_matrix_file(episode)
     
     with open(filename, mode='r') as file:
         reader = csv.reader(file)
         Q_matrix = [[float(item) for item in row] for row in reader]
     return Q_matrix
 
-def load_Policy(n_episodes: int,name:str):
+def load_Policy(paths: ExperimentPaths, episode: int):
     """Loads the policy matrix from a CSV file.
 
     Args:
-        n_episodes (int): Number of episodes.
+        paths (ExperimentPaths): The paths of the experiment
+        episode (int): The episode number.
     """
     # Define the filename
-    filename = name+f"/policy_after_{n_episodes}episodes.csv"
+    filename = paths.policy_matrix_file(episode)
 
     with open(filename, mode='r') as file:
         reader = csv.reader(file)
-        #Policy = [[int(item) for item in row] for row in reader]
         Policy = [int(row[0]) for row in reader]
     return Policy

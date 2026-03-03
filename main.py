@@ -3,7 +3,6 @@ from systemModel.codebooks import CodebookSpec
 
 from experiments.store import Store, ExperimentPaths
 from experiments.builder import ExperimentBuilder
-from experiments.runner import Runner
 
 from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
@@ -45,12 +44,12 @@ def main():
                                         size_codebooks=size_codebooks, 
                                         codebook_specs=codebook_specs,
 
-                                        mean_noise=0,
                                         SNR=10,
                                         # snr_values = [0,5,10,20],
                                         snr_values = [20],
                                         type_channel="half-spaced ULAs",
                                         type_modulation="BPSK", 
+                                        mean_noise=0,
                                         mean_channel=0, 
                                         std_channel=[], 
                                         sigma_alpha=0, 
@@ -65,7 +64,7 @@ def main():
                                         epsilon_min=0.01,
                                         delta_init=delta,
                                         delta_decay=1,
-                                        delta_final=5e-2, 
+                                        delta_min=5e-2, 
 
                                         params_list=[256,256],
                                         loss_fct='mse',

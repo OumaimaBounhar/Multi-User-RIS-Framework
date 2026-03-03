@@ -1,87 +1,109 @@
-import torch
 import os
+import torch
 import numpy as np 
+from typing import Union
 from matplotlib import pyplot as plt 
+from experiments.store import ExperimentPaths
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
 
-def save_model_checkpoints(
-                            name,
-                            epoch, 
-                            eval_net, 
-                            target_net
+def save_dqn_weights(
+        paths: ExperimentPaths,
+        epoch: Union[int, str], 
+        eval_net, 
+        target_net
 ):
-    # Create path
-    checkpoint_dir =  os.path.join(name, "checkpoints")
-    os.makedirs(checkpoint_dir, exist_ok = True)
-    
-    model_path = checkpoint_dir + 'epoch_' + str(epoch) 
+    """Save DQN model checkpoints for both evaluation and target networks.
 
-    # Save models of the Evaluation and Target Network
-    torch.save(eval_net.state_dict(), model_path + '_eval.pth')
-    torch.save(target_net.state_dict(), model_path + '_target.pth')
-    print(f'Weights saved in: {model_path}')
+    Args:
+        paths (ExperimentPaths): Object containing experiment paths for saving.
+        epoch (Union[int, str]): Epoch number or identifier for the checkpoint ("last" for the last model to save).
+        eval_net: The evaluation Q-network
+        target_net: The target Q-network
+    """
 
-def save_last_models(
-                        name,
-                        eval_net,
-                        target_net
-):
-    # Create path 
-    checkpoint_dir = os.path.join(name, "checkpoints")
-    os.makedirs(checkpoint_dir, exist_ok = True)
+    # Ensure the 'checkpoints' directory exists
+    os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
 
-    # Save last models of the Evaluation and Target Network
-    torch.save(eval_net.state_dict(), os.path.join(checkpoint_dir, "last_eval.pth"))
-    torch.save(target_net.state_dict(), os.path.join(checkpoint_dir, "last_target.pth"))
-    print("[INFO] Deep Q-Learning Training : Process Completed !")
+    # Get the specific paths from the store logic
+    eval_path = paths.dqn_checkpoint_file(epoch, "eval")
+    target_path = paths.dqn_checkpoint_file(epoch, "target")
+
+    # Save the state dicts
+    torch.save(eval_net.state_dict(), eval_path)
+    torch.save(target_net.state_dict(), target_path)
+
+    # 4. Feedback
+    label = f"Epoch {epoch}" if isinstance(epoch, int) else "last"
+    print(f"[INFO] {label} weights saved to {paths.dqn_checkpoints_dir}")
 
 #---------------------------------------- Visualization  ------------------------------------------------------------------------------
 
 def plot_Convergence(
-                        name, 
-                        avg_losses, 
-                        avg_len_path
+        paths: ExperimentPaths, 
+        avg_losses, 
+        avg_len_path
 ):
+    # Plot Loss
+    plt.figure()
     plt.plot(avg_losses, 'b', label='loss')
-    #plt.plot(epsilons, 'r', label='Exploration Rate')
     plt.title("Convergence of DQN Algorithm loss")
     plt.xlabel("Epoch")
     plt.ylabel("Average loss")
-    plt.savefig(name + "/convergence_deep_q_learning.png")
-    # plt.show()
+    plt.savefig(paths.dqn_loss_plot())
     plt.close()
     
+    # Plot Path Length
+    plt.figure()
     plt.plot(avg_len_path, 'b', label='len path')
-    #plt.plot(epsilons, 'r', label='Exploration Rate')
     plt.title("Convergence of DQN Algorithm number action") 
     plt.xlabel("Epoch")
     plt.ylabel("Average len path")
-    plt.savefig(name + "/convergence_deep_q_learning_len_path.png")
+    plt.savefig(paths.dqn_path_plot())
     plt.close()
 
 #---------------------------------------- Reporting ------------------------------------------------------------------------------
 
 def save_Data(
-                name, 
-                avg_losses, 
-                avg_len_path, 
-                epsilons
+        paths: ExperimentPaths, 
+        avg_losses, 
+        avg_len_path, 
+        epsilons
 ):
-    # Save loss values in a CSV file
-    loss_file_path = os.path.join(name, "losses.csv")
-    np.savetxt(loss_file_path, avg_losses, delimiter=",", header="Average Loss", comments="")
+
+    os.makedirs(paths.checkpoints_dir, exist_ok=True)
     
+    # Save loss values in a CSV file
+    np.savetxt(
+        paths.dqn_metrics_csv("losses"), 
+        avg_losses, 
+        delimiter=",", 
+        header="Average Loss", 
+        comments=""
+    )
+
     # Save average len path values in a CSV file
-    avg_len_path_file_path = os.path.join(name, "avgLenPath.csv")
-    np.savetxt(avg_len_path_file_path, avg_len_path, delimiter=",", header="Average Len Path", comments="")
+    np.savetxt(
+        paths.dqn_metrics_csv("avgLenPath"), 
+        avg_len_path, 
+        delimiter=",", 
+        header="Average Len Path", 
+        comments=""
+    )
 
     # Save exploration rates in a CSV file
-    epsilon_file_path = os.path.join(name, "epsilons.csv")
-    np.savetxt(epsilon_file_path, epsilons, delimiter=",", header="Epsilon Values", comments="")
+    np.savetxt(
+        paths.dqn_metrics_csv("epsilons"), 
+        epsilons, 
+        delimiter=",", 
+        header="Epsilon Values", 
+        comments=""
+    )
 
-    print(f"[INFO] Losses saved to {loss_file_path}")
-    print(f"[INFO] Epsilon values saved to {epsilon_file_path}")
+    print(f"[INFO] Losses saved to {paths.dqn_metrics_csv('losses')}")
+    print(f"[INFO] Average path lengths saved to {paths.dqn_metrics_csv('avgLenPath')}")
+    print(f"[INFO] Epsilon values saved to {paths.dqn_metrics_csv('epsilons')}")
+    print(f"[INFO] DQN Metrics saved in {paths.checkpoints_dir}")
             
 def save_model_complexity(
                             model,
