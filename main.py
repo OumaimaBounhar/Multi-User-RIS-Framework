@@ -103,8 +103,9 @@ def main():
                                         test_freq_QL = 1,
                                         
                                         precision=2,  
-                                        blabla_other_states=1, 
-                                        min_representatives_q_learning_train=100, 
+                                        len_window_channel=10,
+                                        modification_channel=0,
+                                        min_representatives_q_learning_train=100,
                                         min_representatives_q_learning_test=10
                                         ) # All the parameters stored in a class
 

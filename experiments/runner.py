@@ -88,7 +88,9 @@ class Runner:
                 "probability": self.probability,
                 "states": self.env.state_space,
                 "filename": self.filename,
+                "len_window_channel": self.parameters.len_window_channel,
                 "Policy_Q": q_policy,
+                "modification_channel": self.parameters.modification_channel,
                 "snr_values": self.parameters.snr_values
             }
 

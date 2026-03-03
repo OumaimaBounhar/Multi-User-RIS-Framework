@@ -75,20 +75,18 @@ class Parameters :
 
                     precision: int = 2,  
                     len_window_channel:int = 10,
-                    blabla_other_states: int = 1, 
+                    modification_channel=0,
                     min_representatives_q_learning_train: int = 100,  
                     min_representatives_q_learning_test: int = 10
                     ) :
         
         ### For the channel ###
-        
         self.N_R = N_R # Number antennas at the Receiver
         self.N_T = N_T # Number antennas at the Transmitter
         self.N_RIS = N_RIS  # Number Reflective elements at the RIS
         
         self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
         self.type_channel = type_channel
-        self.len_window_channel = len_window_channel
         
         if type_channel == "IID":
             self.mean_channel = mean_channel
@@ -138,7 +136,8 @@ class Parameters :
         self.test_freq_QL = test_freq_QL
         
         self.precision = precision
-        self.blabla_other_states = blabla_other_states
+        self.len_window_channel = len_window_channel
+        self.modification_channel = modification_channel
         self.min_representatives_q_learning_train = min_representatives_q_learning_train
         self.max_samples_q_learning_train = 2*min_representatives_q_learning_train*size_codebooks[0] 
         self.min_representatives_q_learning_test = min_representatives_q_learning_test
@@ -237,7 +236,6 @@ class Parameters :
             "test_freq": self.test_freq_QL,
 
             "precision": self.precision,
-            "blabla_other_states": self.blabla_other_states,
             "min_representatives_q_learning_train": self.min_representatives_q_learning_train,
             "max_samples_q_learning_train": self.max_samples_q_learning_train,
             "min_representatives_q_learning_test": self.min_representatives_q_learning_test,
