@@ -237,7 +237,7 @@ class QLearningAgent():
         """
         all_len_path = []
         
-        for channel_realization in range(self.n_channels_train):
+        for _ in range(self.n_channels_train):
             
             ## Start at the initial state
             current_state_index = 0 
@@ -255,7 +255,7 @@ class QLearningAgent():
             index_channel = (index_class_channel,index_specific_channel)
             done = False
         
-            for time_step in range(self.n_time_steps):
+            for _ in range(self.n_time_steps):
                 
                 for path in range(self.max_len_path):
 
@@ -264,7 +264,8 @@ class QLearningAgent():
                         
                     # Update the state
                     # Reset the list of samples and put prior = posterior
-                    self.environment.reset_curse_dimension()
+                    if path % self.parameters.len_window_channel == 0:
+                        self.environment.reset_curse_dimension()
                     
                     next_state_index , reward, info = self.environment.step(index_channel,index_action, model_type = 'QL')
 

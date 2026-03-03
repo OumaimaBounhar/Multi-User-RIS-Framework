@@ -28,6 +28,7 @@ class Methods:
         self.feedback = feedback
         self.probability= probability
         self.state = state
+        self.len_window_channel = parameters.len_window_channel # length of the window to take into account the evolution of the channel, we assume the channel does not change drastically in the window
         
         # Q-learning
         self.Policy_Q = Policy_Q
@@ -50,26 +51,28 @@ class Methods:
         ### Exhaustive ###
         self.counter_exhaustive = 0 # Count the number of beams tested (we test all codeword of communications one after the other then starts again)
         self.list_exh = np.zeros(size_codebooks[0]) # Contains the RSE for the codewords tested for exhaustive search
+
         ### Hierarchical ###
         for _, spec in zip(size_codebooks, codebook_specs):
             if spec.kind.lower() == "hierarchical":
                 self.K,self.M = spec.K, spec.M
         self.counter_hierarchical = 0 # Count the number of beams tested for hierarchical search (between 0 and K*M)
-        self.argmax_hier = 0
-        self.list_hier = np.zeros(self.M) # contains the M elements tested to compare them and select the next branch
-        self.hier_best_beam = r.randint(0,size_codebooks[0]-1) # the best beam found by the hierarchical search, initialized randomly
+        self.argmax_hierarchical = 0
+        self.list_hierarchical = np.zeros(self.M) # contains the M elements tested to compare them and select the next branch
+        self.hierarchical_best_beam = r.randint(0,size_codebooks[0]-1) # the best beam found by the hierarchical search, initialized randomly
+
         ### Random Sampling ###
         self.prior_random = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
         self.ordered_list_random = np.argsort(self.prior_random)[::-1] 
         self.counter_random = 0 # Count the number of beams tested
         self.list_random:list = []
         self.posterior_random = np.ones(size_codebooks[0])/size_codebooks[0]
+
         ### Q_learning Sampling ###
         self.prior_q = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
         self.posterior_q = np.ones(size_codebooks[0])/size_codebooks[0] 
         self.ordered_list_q = np.argsort(self.prior_q)[::-1] 
         self.counter_channel_q = 0 # Count the number of pilots tested before the channel changes too much
-        self.counter_action_q = 0 # Count the number of pilots tested (an action corresponds corresponds to self.len_window_action pilots)
         self.list_q:list = []
         self.actions_q = [] # all actions that we took
         
@@ -78,7 +81,6 @@ class Methods:
         self.posterior_deep_q = np.ones(size_codebooks[0])/size_codebooks[0] 
         self.ordered_list_deep_q = np.argsort(self.prior_q)[::-1] 
         self.counter_channel_deep_q = 0 # Count the number of pilots tested before the channel changes too much
-        self.counter_action_deep_q = 0 # Count the number of pilots tested (an action corresponds corresponds to self.len_window_action pilots)
         self.list_deep_q:list = []
         
     def optimal_codeword(self)->int:
@@ -113,7 +115,7 @@ class Methods:
         ### Hierarchical search, noise ###
         count = self.counter_hierarchical # Keeps track of how many codewords have been tested so far
         K_hier, M_hier = self.K,self.M # K = total levels, M = number of branches per level
-        argmax_hier = self.argmax_hier # Stores the best subgroup found so far
+        argmax_hier = self.argmax_hierarchical # Stores the best subgroup found so far
         
         k = count//M_hier # length of the tree we reached
         n = count%M_hier ## n is the number of the leaf tested in the tree at length k
@@ -123,24 +125,24 @@ class Methods:
 
         self.feedback.transmit(index_beam,codebook_used=1)
         RSE = self.feedback.get_feedback(noise=True)
-        self.list_hier[count%M_hier] = RSE
+        self.list_hierarchical[count%M_hier] = RSE
 
         count += 1
         self.counter_hierarchical = count
         if count%M_hier == 0: ## If search is over at the k level of the tree (M codewords were tested), then test next level
-            argmax_hier = argmax_hier*M_hier + int(np.argmax(self.list_hier))
-            self.argmax_hier = argmax_hier
+            argmax_hier = argmax_hier*M_hier + int(np.argmax(self.list_hierarchical))
+            self.argmax_hierarchical = argmax_hier
             for elmt in range(0,M_hier):
-                self.list_hier[elmt] = 0
+                self.list_hierarchical[elmt] = 0
             
         ## If search is over declare the codeword found
         # If search is over reset the counter and start again
         if count == K_hier*M_hier:
-            self.hier_best_beam = argmax_hier
-            self.argmax_hier = 0
+            self.hierarchical_best_beam = argmax_hier
+            self.argmax_hierarchical = 0
             self.counter_hierarchical = 0
             
-        return self.hier_best_beam
+        return self.hierarchical_best_beam
     
     def random_sampling(self)->int:
         ### Randomly selects pilots, then compute probability, with noise ###
@@ -159,8 +161,6 @@ class Methods:
         self.list_random = Samples
         
         ### Update Probability ###
-        #print(ordered_list)
-        #print(prior)
         prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
         self.ordered_list_random = ordered_list
         self.posterior_random = prior
@@ -184,7 +184,7 @@ class Methods:
     
     def q_learning_sampling(self)->int:
         ###  Selects pilots with Q-learning policy, then compute probability, with noise ###
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
+        size_codebooks, _ = self.parameters.get_codebook_parameters()
         prior = self.prior_q
         ordered_list = self.ordered_list_q
         counter_channel = self.counter_channel_q
@@ -206,24 +206,16 @@ class Methods:
                 closest_state_index = next_state_index
         
         best_action = int(self.Policy_Q[closest_state_index])
+
+        # Optional: avoid repeating same action
         if best_action in all_actions:
             best_action = r.randint(0,size_codebooks[1]-1)
         
-        # print(len(self.Policy_Q))
-        # print(best_action) 
         ####### Peut être plus efficace en stockant best action ######
         self.actions_q.append(best_action)
-        tuple_action = []
-        action = best_action
-        for window in range(0,self.len_window_action):
-            action_window = action//(size_codebooks[1]**(self.len_window_action-window-1)) 
-            action = action_window%(size_codebooks[1]**(self.len_window_action-window-1))
-            tuple_action.append(action_window)
-            
-        self.counter_action_q = self.counter_action_q + 1
-        index_codeword_tested = tuple_action[self.counter_action_q-1]
-        if self.counter_action_q == self.len_window_action:
-            self.counter_action_q = 0
+
+        # One action = one pilot ===
+        index_codeword_tested = best_action
         
         self.feedback.transmit(index_codeword_tested,codebook_used=1)
         RSE = self.feedback.get_feedback(noise = True)
@@ -231,18 +223,10 @@ class Methods:
         self.list_q = Samples
         
         ### Update Probability ###
-        #print(ordered_list)
-        #print("before")
-        #print(prior)
-        
         prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
         self.posterior_q = prior
         
-        #print(prior)
-        #print(Samples)
         best_codeword = ordered_list[0]
-        
-        #print(prior)
         
         counter_channel += 1
         self.counter_q = counter_channel
@@ -260,7 +244,6 @@ class Methods:
     
     def deep_q_learning_sampling(self)->int:
         ###  Selects pilots with Q-learning policy, then compute probability, with noise ###
-        size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
         prior = self.prior_deep_q
         ordered_list = self.ordered_list_deep_q
         counter_channel = self.counter_channel_deep_q
@@ -271,46 +254,20 @@ class Methods:
         ### Pilot sent ###
         state_tensor = torch.tensor(current_proba, dtype= torch.float32).to(self.evaluation_q_network.device)
         q_values = self.evaluation_q_network(state_tensor)
-        #print("proba")
-        #print(current_proba)
-        # print(q_values)
-        # print(len(q_values))
         best_action = torch.argmax(q_values).item()
-        # print(f'best_action : {best_action}')
-                
-        #best_action = int(self.Policy[closest_state_index])
-        ####### Peut être plus efficace en stockant best action ######
-    
-        tuple_action = []
-        action = best_action
-        for window in range(0,self.len_window_action):
-            action_window = action//(size_codebooks[1]**(self.len_window_action-window-1)) 
-            action = action_window%(size_codebooks[1]**(self.len_window_action-window-1))
-            tuple_action.append(action_window)
-            
-        self.counter_action_deep_q = self.counter_action_deep_q + 1
-        index_codeword_tested = tuple_action[self.counter_action_deep_q-1]
-        if self.counter_action_deep_q == self.len_window_action:
-            self.counter_action_deep_q = 0
-        
+
+        index_codeword_tested = best_action
+
         self.feedback.transmit(index_codeword_tested,codebook_used=1)
         RSE = self.feedback.get_feedback(noise = True)
         Samples.append((RSE,index_codeword_tested))
         self.list_deep_q = Samples
-        
+
         ### Update Probability ###
-        #print(ordered_list)
-        #print("before")
-        #print(prior)
-        
         prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
         self.posterior_deep_q = prior
         
-        #print(prior)
-        #print(Samples)
         best_codeword = ordered_list[0]
-        
-        #print(prior)
         
         counter_channel += 1
         self.counter_deep_q = counter_channel
@@ -327,7 +284,6 @@ class Methods:
             
         return best_codeword 
     
-    
     def test_narrow(self,correct_class)->int:
         ### Randomly selects pilots, then compute probability, with noise ###
         size_codebooks, type_codebooks = self.parameters.get_codebook_parameters()
@@ -338,19 +294,15 @@ class Methods:
         
         ### Pilot sent ###
         for best in range(0,2):
-            #index_codeword_tested = correct_class + size_codebooks[1] - size_codebooks[0]
             index_codeword_tested = ordered_list[best] + size_codebooks[1] - size_codebooks[0]
             self.feedback.transmit(index_codeword_tested,codebook_used=1)
             RSE = self.feedback.get_feedback(noise = True)
             Samples.append((RSE,index_codeword_tested))
-            
-            #index_codeword_tested = r.randint(0, size_codebooks[0]-1) + size_codebooks[1] - size_codebooks[0]
 
         prior = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
         ordered_list = np.argsort(self.prior_random)[::-1] 
         
         ### Update Probability ###
-        
         prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
         best_codeword = ordered_list[0]
         #print(prior)
@@ -378,7 +330,6 @@ class Methods:
                 best_codeword = index_codeword_tested - size_codebooks[1] + size_codebooks[0]
             
         return best_codeword 
-    
     
     def test_maxprob(self,correct_class):
         ### Randomly selects pilots, then compute probability, with noise ###

@@ -37,15 +37,6 @@ class Dataset_probability:
         self.filename = filename
         # If a dataset is available put it here
         self.set_new_MC()
-    #     self.save_min_representatives(filename)
-    
-    # def save_min_representatives(self, filename):
-    #     """Saves the value of min_representatives in the given filename."""
-        
-    #     with open(filename, "w") as f:
-    #         f.write(f"min_representatives: {self.min_representatives}\n")           
-        
-    #     print(f"min_representatives saved in {filename}")
         
     def set_new_MC(self):
         """Generates a set of elements:
@@ -75,11 +66,8 @@ class Dataset_probability:
             n_representant_class = np.zeros(size_codebooks[0],dtype ="int")
             
             for sample in tqdm(range(self.max_samples//len(self.parameters.snr_values))):
-                # if np.all([k >= self.min_representatives for k in n_representant_class]): #To avoid having empty classes
-                #     break
-                
+
                 self.channel.new_channel() # Generates a new channel
-                # print(f"[INFO] SNR values when generating a new channel {self.parameters.SNR} and st noise = {self.parameters.std_noise}")
                 
                 List_RSE_communication = []
                 for n_communications in range(size_codebooks[0]):

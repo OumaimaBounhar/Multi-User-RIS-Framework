@@ -74,6 +74,7 @@ class Parameters :
                     test_freq_QL: int = 1,
 
                     precision: int = 2,  
+                    len_window_channel:int = 10,
                     blabla_other_states: int = 1, 
                     min_representatives_q_learning_train: int = 100,  
                     min_representatives_q_learning_test: int = 10
@@ -87,6 +88,7 @@ class Parameters :
         
         self.sigma_alpha = sigma_alpha # Variance of the attenuation of paths 
         self.type_channel = type_channel
+        self.len_window_channel = len_window_channel
         
         if type_channel == "IID":
             self.mean_channel = mean_channel

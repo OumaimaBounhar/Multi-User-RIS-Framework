@@ -12,13 +12,11 @@ class Environment():
                     states : State,
                     parameters: Parameters,
                     probability : Probability, 
-                    dataset_train: Dataset_probability, 
-                    dataset_test: Dataset_probability
+                    dataset_train: Dataset_probability
                 ):
         
         ## Dataset
         self.dataset_train = dataset_train.get_Data()
-        self.dataset_test = dataset_test.get_Data()
         
         ## For the Q-Learning
         self.state_space = states
@@ -46,7 +44,7 @@ class Environment():
         self.prior = self.posterior
         self.List_Samples = [] ## resets the list of samples
     
-    def step(self, index_channel:Tuple[int,int],best_action,train_or_test:bool=True, model_type = 'DQN'):
+    def step(self, index_channel:Tuple[int,int],best_action, model_type = 'DQN'):
         """" 
         Args :
         -------
@@ -63,20 +61,13 @@ class Environment():
         ## Feedback for a channel stored in the dataset
         index_class_channel,index_specific_channel = index_channel
         
-        if train_or_test:
-            Feedback_channel = (self.dataset_train)[index_class_channel][1][index_specific_channel]
-        else:
-            Feedback_channel = (self.dataset_test)[index_class_channel][1][index_specific_channel]
+        Feedback_channel = (self.dataset_train)[index_class_channel][1][index_specific_channel]
         
-        ## Loop on the size of the number of action we take
-        for window in range(0,self.len_window_action):
-            # codeword_to_test = best_action[window]
-            codeword_to_test = best_action #Just to make the dql work for the moment as best_action is an index and not a list
-            Feedback_action = Feedback_channel[codeword_to_test]
-            (self.List_Samples).append((Feedback_action, codeword_to_test)) ## Stores the new sample
-            
+        codeword_to_test = best_action # Best_action is the index of the codeword to test
+        Feedback_action = Feedback_channel[codeword_to_test]
+        (self.List_Samples).append((Feedback_action, codeword_to_test)) ## Stores the new sample
+        
         posterior = self.probability.update(self.prior, self.ordered_list, new_sample = self.List_Samples)[0]
-        #print(posterior)
         self.posterior = posterior
         
         closest_state_index:int = -1
@@ -134,7 +125,7 @@ class Environment():
             return posterior, reward, terminated, truncated, info
     
     def get_dataset(self):
-        return self.dataset_train,self.dataset_test
+        return self.dataset_train
     
     def get_state_space(self):
         return self.state_space

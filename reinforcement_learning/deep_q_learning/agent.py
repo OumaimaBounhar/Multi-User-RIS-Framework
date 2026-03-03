@@ -141,7 +141,6 @@ class DeepQLearningAgent():
         n_channels_train = params_dict["n_channels_train"]
         n_time_steps = params_dict["n_time_steps"]
         max_len_path = params_dict["max_len_path"]
-        train_or_test = params_dict["train_or_test"]
         
         freq_update_target = params_dict["freq_update_target"]
         tau = params_dict["tau"]
@@ -163,19 +162,11 @@ class DeepQLearningAgent():
                 
                 ## Set the prior at the initial state
                 self.environment.reset_prior()
-                len_window_channel = self.environment.get_len_window_channel()
+                len_window_channel = self.parameters.len_window_channel
                 
-                # Pick a new channel from dataset 
-                if train_or_test:
-                    # Training : Random channel
-                    index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
-                    index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
-                else:
-                    ## Testing : test elements in the dataset one after the other (???????????? I don't understand this part)
-                    index_class_channel = channel_realization%len(self.dataset_test)
-                    index_specific_channel = channel_realization//len(self.dataset_test)
-                    if channel_realization//len(self.dataset_test) >= len((self.dataset_test)[index_class_channel][1]):
-                        index_specific_channel = np.random.randint(0,len((self.dataset_test)[index_class_channel][1]))
+                # Training : Pick a random channel from dataset
+                index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
+                index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
 
                 index_channel = (index_class_channel,index_specific_channel)
 
@@ -195,18 +186,14 @@ class DeepQLearningAgent():
                             self.environment.reset_curse_dimension()
 
                         # Action selection
-                        if train_or_test:
-                            index_action = self.choose_action(current_state, epsilon)
-                        else:
-                            index_action = self.choose_action(current_state, 0.0) ## Greedy Action during the test
+                        index_action = self.choose_action(current_state, epsilon)
                         
                         # Environment step    
-                        next_state, reward, terminated, truncated, info = self.environment.step(
-                                                                                                index_channel,
-                                                                                                index_action,
-                                                                                                train_or_test=train_or_test,
-                                                                                                model_type = 'DQN'
-                                                                                                )
+                        next_state, reward, terminated, truncated, _ = self.environment.step(
+                            index_channel,
+                            index_action,
+                            model_type = 'DQN'
+                            )
                         
                         # Save the reward
                         path_len += 1
@@ -218,8 +205,7 @@ class DeepQLearningAgent():
                         done = terminated or truncated
                             
                         # Store the transition in the replay buffer training
-                        if train_or_test:
-                            self.replay_buffer.store_transition(current_state, index_action, reward, next_state, done)
+                        self.replay_buffer.store_transition(current_state, index_action, reward, next_state, done)
                             
                         current_state = next_state
                         if done:

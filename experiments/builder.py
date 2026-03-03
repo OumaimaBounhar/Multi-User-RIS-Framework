@@ -87,8 +87,7 @@ class ExperimentBuilder:
             states=states,
             parameters=self.parameters,
             probability=probability,
-            dataset_train=dataset_proba,
-            dataset_test=dataset_proba
+            dataset_train=dataset_proba
             )
 
         return Runner(

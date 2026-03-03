@@ -57,6 +57,7 @@ def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
     # Save all noise fitting results in one file
     noise_results_df = pd.DataFrame(noise_results, columns=["SNR (dB)", "Mean", "Std"])
     noise_results_df.to_csv(f"{filename}/Noise_parameters_all.csv", index=False)
+    
     # Canonical file expected by Store/noise loading.
     noise_results_df.loc[:, ["Mean", "Std"]].iloc[[0]].to_csv(
         f"{filename}/Noise_parameters.csv", index=False
