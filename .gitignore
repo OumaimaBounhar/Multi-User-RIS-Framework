@@ -4,3 +4,8 @@ venv/
 __pycache__/
 *.pickle
 .venv/
+Data/*
+*.pth
+*.png
+*.dat
+*.csv
