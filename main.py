@@ -66,8 +66,8 @@ def main():
                                         epsilon_min=0.01,
 
                                         delta_init=delta,
-                                        delta_decay=1,
-                                        delta_min=5e-2, 
+                                        delta_decay=0.99,
+                                        delta_min=1e-3, 
 
                                         params_list=[256,256],
                                         loss_fct='mse',

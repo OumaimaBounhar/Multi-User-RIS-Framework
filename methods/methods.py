@@ -253,7 +253,8 @@ class Methods:
         current_proba = self.posterior_deep_q # To make the decision about the next codeword to test
         
         ### Pilot sent ###
-        state_tensor = torch.tensor(current_proba, dtype= torch.float32).to(self.evaluation_q_network.device)
+        device = next(self.evaluation_q_network.parameters()).device # Get the device of the network (CPU or GPU) as the agent ows the device
+        state_tensor = torch.tensor(current_proba, dtype=torch.float32).to(device)
         q_values = self.evaluation_q_network(state_tensor)
         best_action = torch.argmax(q_values).item()
 

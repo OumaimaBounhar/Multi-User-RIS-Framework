@@ -250,9 +250,10 @@ class Test:
             mode
         )
 
+        paths = ExperimentPaths(root=testing_objects_dict["filename"])
+
         # Logic to find checkpoints based on mode
         if mode == 'both' or mode == 'dqn':
-            paths = ExperimentPaths(root=testing_objects_dict["filename"])
             dqn_files = sorted(
                 [
                     f for f in os.listdir(checkpoints_dir_dql) 
@@ -262,35 +263,39 @@ class Test:
 
             for f in dqn_files:
                 epoch_digits = ''.join(filter(str.isdigit, f))
+
                 if not epoch_digits:
                     continue
+
                 epoch = int(epoch_digits)
 
                 if epoch % self.parameters.test_freq_DQN == 0:
+
                     if self.DQN is None:
                         raise ValueError("DQN agent is required to run DQN checkpoint tests.")
-                    self.DQN.evaluation_q_network.load_state_dict(
-                        torch.load(
-                            os.path.join(
-                                checkpoints_dir_dql, 
-                                f
-                            )
-                        )
-                    )
-
-                    self.DQN.evaluation_q_network.eval()
                     
+                    device = self.DQN.device
+                    
+                    state_dict = torch.load(os.path.join(checkpoints_dir_dql, f), map_location=device)
+
+                    self.DQN.evaluation_q_network.load_state_dict(state_dict)
+
+                    self.DQN.evaluation_q_network.to(device)
+                    self.DQN.evaluation_q_network.eval()
+
                     policy_ql = None
+
                     if mode == 'both':
                         # Attempt to find matching QL policy by epoch
                         try:
                             policy_ql = load_Policy(
-                                paths=paths, 
-                                episode=epoch
+                                paths= paths,
+                                episode = epoch
                             )
+                            
                         except FileNotFoundError:
                             policy_ql = None
-                    
+                            
                     self.test(
                         testing_objects_dict, 
                         epoch, 
@@ -300,7 +305,6 @@ class Test:
                     )
                     
         elif mode == 'ql':
-            paths = ExperimentPaths(root=testing_objects_dict["filename"])
 
             ql_files = sorted(
                 [
@@ -316,8 +320,8 @@ class Test:
                 if epoch % self.parameters.test_freq_QL == 0:
 
                     policy_ql = load_Policy(
-                        paths=paths,
-                        episode=epoch
+                        paths= paths,
+                        episode = epoch
                     )
 
                     self.test(
