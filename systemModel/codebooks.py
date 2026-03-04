@@ -72,7 +72,8 @@ class Codebooks:
         
             codebooks.append(codebook)
 
-            print([len(cb) for cb in self.codebooks], "expected", size_codebooks)
+            # debug: show lengths of generated codebooks vs expected sizes
+            print([len(cb) for cb in codebooks], "expected", size_codebooks)
             
         self.codebooks = codebooks
         

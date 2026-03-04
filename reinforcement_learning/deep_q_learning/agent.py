@@ -16,16 +16,17 @@ from reinforcement_learning.deep_q_learning.utils import save_dqn_weights, plot_
 class DeepQLearningAgent():
     """ Class for Deep Q-Learning Algorithm"""
     
-    def __init__(self,
-                    input_dims: int, #we input the state index
-                    environment : Environment,
-                    parameters: Parameters,
-                    paths: ExperimentPaths
-                ):
+    def __init__(
+        self,
+        parameters: Parameters,
+        environment : Environment,
+        paths: ExperimentPaths
+    ):
         
         self.simu_parameters = parameters
         self.environment = environment
         self.paths = paths
+        
         self.input_dims = self.environment.get_size_states()
         self.n_states = self.environment.state_space.get_n_states()
         self.n_actions = self.environment.get_size_codebook()[1]
@@ -64,7 +65,7 @@ class DeepQLearningAgent():
         self.update_step = 0 # Count how many gradients have been performed
 
         # ---- Dataset ----
-        self.dataset_train,self.dataset_test = environment.get_dataset()
+        self.dataset_train,self.dataset_test = self.environment.get_dataset()
 
         # ---- Device ----
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

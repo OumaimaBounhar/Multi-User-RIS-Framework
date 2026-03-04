@@ -40,15 +40,16 @@ class Runner:
         agent = QLearningAgent(
             environment=self.env,
             parameters=self.parameters,
-            name_file=q_matrices_path
+            paths=self.store.paths
         )
 
         agent.train()
         
         # Load the newly trained policy
         return load_Policy(
-            self.store.paths,
-            self.parameters.n_episodes
+            paths = self.store.paths,
+            episode = self.parameters.n_episodes,
+            is_last=True
         )
     
     def run_deep_q_learning(self):
@@ -60,12 +61,9 @@ class Runner:
 
         print("[INFO] Starting Deep Q-Learning Training...")
 
-        input_dims = self.env.get_size_states()
-
         agent = DeepQLearningAgent(
-            input_dims = input_dims,
-            environment = self.env,
             parameters = self.parameters,
+            environment = self.env,
             paths = self.store.paths
         )
 
@@ -121,8 +119,9 @@ class Runner:
         )
 
         # 4. Execute the multi-SNR testing suite
-        tester.test_saved_models(
+        tester.run_model_tests(
             testing_objects_dict=testing_objects_dict,
             checkpoints_dir_ql=self.store.paths.q_matrices_dir,
             checkpoints_dir_dql=self.store.paths.dqn_checkpoints_dir
+            mode='both'
         )

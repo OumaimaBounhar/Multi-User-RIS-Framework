@@ -59,18 +59,32 @@ class ExperimentPaths:
             "Q_matrices"
         )
 
-    def q_matrix_file(self, episode: int) -> str:
+    def q_matrix_file(self, episode: int, is_last: bool = False) -> str:
         """ Save the Q-matrix as a CSV file
+        Args:
+            episode (int): The episode number after which the Q-matrix is saved.
+            is_last (bool): Whether this is the final Q-matrix after training completion. If True, the filename will indicate it's the last one.
+        Returns:
+            str: The path to save the Q-matrix CSV file.
         """
+        prefix = "Q_matrix_final_after_" if is_last else f"Q_matrix_after_"
         return os.path.join(
             self.q_matrices_dir, 
-            f"Q_matrix_after_{episode}episodes.csv"
+            f"{prefix}{episode}episodes.csv"
         )
 
-    def policy_matrix_file(self, episode: int) -> str:
+    def policy_matrix_file(self, episode: int, is_last: bool = False) -> str:
+        """ Save the policy matrix as a CSV file
+        Args:
+            episode (int): The episode number after which the policy matrix is saved.
+            is_last (bool): Whether this is the final policy matrix after training completion. If True, the filename will indicate it's the last one.
+        Returns:
+            str: The path to save the policy matrix CSV file.
+        """
+        prefix = "policy_final_after_" if is_last else f"policy_after_"
         return os.path.join(
             self.q_matrices_dir, 
-            f"policy_after_{episode}episodes.csv"
+            f"{prefix}{episode}episodes.csv"
         )
 
     def ql_frequency_matrix_file(self, n_episodes, delta, alpha) -> str:
@@ -192,3 +206,4 @@ class Store:
     def load_noise(self) -> Tuple[float, float]:
         df = pd.read_csv(self.paths.noise_csv)
         return float(df["Mean"].iloc[0]), float(df["Std"].iloc[0])
+    

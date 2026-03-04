@@ -50,7 +50,7 @@ class DatasetFactory:
                 feedback (Feedback): The feedback mechanism for dataset generation.
                 noisy_samples (bool, optional): Whether to include noise in the generated samples. Defaults to True.
                 
-        ) -> Dataset_Probability
+        ) -> Dataset_probability
         """
         if dataset_mode == DatasetMode.REUSE:
             if not store.dataset_exists():

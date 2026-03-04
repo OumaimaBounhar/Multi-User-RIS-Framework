@@ -11,14 +11,18 @@ class QLearningAgent():
     """
     Class for the agent of Q-Learning
     """
-    def __init__(   self, 
-                    environment: Environment,
-                    parameters: Parameters,
-                    name_file:str="Data/Example_0/Q_matrices") :
+    def __init__(   
+            self, 
+            environment: Environment,
+            parameters: Parameters,
+            paths: ExperimentPaths
+        ) :
         
         ## ---- The environment ----
-        self.environment = environment
         self.parameters = parameters
+        self.environment = environment
+        self.paths = paths
+
         self.state_space = environment.get_state_space()
         self.n_states = environment.state_space.get_n_states()
         self.n_codebook_pilots = (environment.get_size_codebook())[1]
@@ -50,8 +54,7 @@ class QLearningAgent():
         delta_min = params_dict["delta_min"] # Final degree of precision we want to reach
 
         ## ---- Dataset ----
-        self.name = name_file
-        self.dataset_train,self.dataset_test = environment.get_dataset()
+        self.dataset_train = environment.get_dataset()
         
         ## ---- Q-Matrix ----
         self.Q_matrix = self.initial_q_value * np.ones((self.n_states, self.n_actions))
@@ -201,26 +204,52 @@ class QLearningAgent():
             if episode % self.parameters.saving_freq_QL == 0:
                 
                 # Save the Q-matrix
-                save_Q_matrix(episode,self.name)
+                save_Q_matrix(
+                    self.paths,
+                    self.Q_matrix,
+                    episode
+                )
 
                 # Extract policy
                 policy = extract_Policy(self.Q_matrix)
 
                 # Save policy
-                save_Policy_matrix(policy, episode, self.name)
+                save_Policy_matrix(
+                    self.paths,
+                    policy, 
+                    episode
+                )
         
         print("[INFO] Q-Learning Training : Process Completed !")
         
         # ---- Final save ----
-        save_Policy_matrix(self.n_episodes,self.name)
-        save_Q_matrix(self.n_episodes,self.name)
+        final_policy = extract_Policy(self.Q_matrix)
+        save_Policy_matrix(
+            self.paths, 
+            final_policy, 
+            self.n_episodes, 
+            is_last=True
+        )
+
+        save_Q_matrix(
+            self.paths,
+            self.Q_matrix, 
+            self.n_episodes, 
+            is_last=True
+        )
         
-        save_frequency_update_per_state(self.Q_matrix_freq, self.name, self.n_episodes, self.delta_schedule.init_value, self.learning_rate_schedule.init_value)
+        save_frequency_update_per_state(
+            self.paths, 
+            self.Q_matrix_freq, 
+            self.n_episodes, 
+            self.delta_schedule.init_value, 
+            self.learning_rate_schedule.init_value
+        )
         
         smoothed_avg_len = np.convolve(avg_len_train_epoch, np.ones(10)/10, mode='valid')
         
-        plot_Convergence(self.name, smoothed_avg_len)
-        save_training_metrics(self.name, avg_len_train_epoch)
+        plot_Convergence(self.paths, smoothed_avg_len)
+        save_training_metrics(self.paths, avg_len_train_epoch)
         
     def train_one_episode(self, epsilon: float, delta: float, alpha: float, gamma: float):
         """ 

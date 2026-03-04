@@ -30,7 +30,8 @@ def extract_Policy(Q_matrix) -> np.ndarray:
 def computes_percentage_unvisited_states(Q_matrix_freq) -> float:
     """Computes the percentage of unvisited states in the Q-matrix.
     Args:
-    Q_matrix_freq: The matrix that tracks the states that were visited
+        Q_matrix_freq: The matrix that tracks the states that were visited
+    
     Returns:
         percentage_unvisited_states (float): The percentage of unvisited states in the Q-matrix.
     """
@@ -64,28 +65,30 @@ def plot_Convergence(paths: ExperimentPaths, smoothed_avg_len):
 
 #---------------------------------------- Reporting ------------------------------------------------------------------------------
 
-def save_Q_matrix(paths: ExperimentPaths, Q_matrix, episode: int) -> None:
+def save_Q_matrix(paths: ExperimentPaths, Q_matrix, episode: int, is_last: bool = False) -> None:
     """" Saves the Q-Learning matrix in a csv file
     Args : 
-        paths : The paths of the experiment
-        Q_matrix : The Q-matrix to save
-        episode : The index of the episode
+        paths (ExperimentPaths): The paths of the experiment
+        Q_matrix (np.ndarray): The Q-matrix to save
+        episode (int): The index of the episode
+        is_last (bool): Whether this is the final Q-matrix after training completion. If True, the filename will indicate it's the last one.
     """
     # Ensure the directory exists
-    filename = paths.q_matrix_file(episode)
+    filename = paths.q_matrix_file(episode, is_last)
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     np.savetxt(filename, Q_matrix, delimiter=",", fmt='%.6f')
     print(f"[INFO] Q-matrix saved to {filename}")
     
-def save_Policy_matrix(paths: ExperimentPaths, policy, episode: int) -> None:
+def save_Policy_matrix(paths: ExperimentPaths, policy, episode: int, is_last: bool = False) -> None:
     """" Saves the Policy matrix in a csv file
     Args : 
-        paths : The paths of the experiment
-        policy : The policy to save
-        episode : The index of the episode
+        paths (ExperimentPaths): The paths of the experiment
+        policy (np.ndarray): The policy to save
+        episode (int): The index of the episode
+        is_last (bool): Whether this is the final policy matrix after training completion. If True, the filename will indicate it's the last one.
     """
     # Save the policy matrix to a CSV file
-    filename_policy = paths.policy_matrix_file(episode)
+    filename_policy = paths.policy_matrix_file(episode, is_last)
     os.makedirs(os.path.dirname(filename_policy), exist_ok=True)
     np.savetxt(filename_policy, policy, delimiter=",", fmt='%d')
     print(f"[INFO] Policy saved to {filename_policy}")
@@ -134,17 +137,25 @@ def load_Q_matrix(paths: ExperimentPaths, episode: int) -> List[List[float]]:
         Q_matrix = [[float(item) for item in row] for row in reader]
     return Q_matrix
 
-def load_Policy(paths: ExperimentPaths, episode: int):
+def load_Policy(paths: ExperimentPaths, episode: int, is_last: bool = False) -> List[int]:
     """Loads the policy matrix from a CSV file.
 
     Args:
         paths (ExperimentPaths): The paths of the experiment
         episode (int): The episode number.
+        is_last (bool): Whether this is the final policy matrix after training completion. If True, the filename will indicate it's the last one.
+
+    Returns:
+        Policy (List[int]): List of integers representing the policy.
     """
     # Define the filename
-    filename = paths.policy_matrix_file(episode)
+    filename = paths.policy_matrix_file(episode, is_last=is_last)
 
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f"No policy file found at {filename}. Please ensure the file exists or check the episode number and is_last flag.")
+    
     with open(filename, mode='r') as file:
         reader = csv.reader(file)
         Policy = [int(row[0]) for row in reader]
+    print(f"[INFO] Successfully loaded policy from {filename}")
     return Policy

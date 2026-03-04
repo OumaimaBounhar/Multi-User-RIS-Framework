@@ -12,16 +12,17 @@ import torch
 class Methods:
     """Different methods are implemented:
     They all output the guessed best codeword of communication"""
-    def __init__(self,
-                parameters:Parameters,
-                channel:Channel,
-                feedback:Feedback,
-                probability:Probability,
-                state: State,
-                # Policy_Q:int = 0,
-                Policy_Q: np.ndarray,
-                Policy_network: DQN = None
-                ):
+    def __init__(
+        self,
+        parameters:Parameters,
+        channel:Channel,
+        feedback:Feedback,
+        probability:Probability,
+        state: State,
+        Policy_Q: np.ndarray,
+        Policy_network: DQN = None
+        ):
+        
         ### For the channel ###
         self.parameters = parameters
         self.channel = channel
