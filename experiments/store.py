@@ -134,7 +134,7 @@ class ExperimentPaths:
         prefix = f"epoch_{epoch}" if isinstance(epoch, int) else str(epoch)
         return os.path.join(
             self.dqn_checkpoints_dir, 
-            f"{prefix}_{net_type}"
+            f"{prefix}_{net_type}.pth"
         )
     
     @property
@@ -159,7 +159,7 @@ class ExperimentPaths:
         name (str): should be either "losses", "avgLenPath", or "epsilons"
         """
         return os.path.join(
-            self.checkpoints_dir, 
+            self.dqn_checkpoints_dir, 
             f"{name}.csv"
         )
     

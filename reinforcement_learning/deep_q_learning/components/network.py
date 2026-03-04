@@ -21,16 +21,14 @@ class DQN(nn.Module):
         #Layers of Neural Network
         layers = []
         
-        for i in range(len(params_list)-1):
-            
-            if i == 0:
-                layers.append(nn.Linear(input_dims,  params_list[i]))
-            else:
-                layers.append(nn.Linear(params_list[i-1],  params_list[i]))
+        prev_dim = input_dims
+        for hidden_dim in params_list:
+            layers.append(nn.Linear(prev_dim, hidden_dim))
             layers.append(nn.ReLU())
-            
+            prev_dim = hidden_dim
+
         # Output layer
-        layers.append(nn.Linear(params_list[-1], n_actions))
+        layers.append(nn.Linear(prev_dim, n_actions))
         
         self.network = nn.Sequential(*layers)
         

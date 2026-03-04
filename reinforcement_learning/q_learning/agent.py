@@ -2,8 +2,9 @@ import random
 import numpy as np 
 from tqdm import tqdm
 
-from reinforcement_learning.env import Environment
 from config.parameters import Parameters
+from reinforcement_learning.env import Environment
+from experiments.store import ExperimentPaths
 from reinforcement_learning.q_learning.utils import extract_Policy, computes_percentage_unvisited_states, plot_Convergence,  save_Policy_matrix, save_Q_matrix, save_frequency_update_per_state, save_training_metrics
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule, LinearDecaySchedule
 

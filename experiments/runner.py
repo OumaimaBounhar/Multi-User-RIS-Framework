@@ -122,6 +122,6 @@ class Runner:
         tester.run_model_tests(
             testing_objects_dict=testing_objects_dict,
             checkpoints_dir_ql=self.store.paths.q_matrices_dir,
-            checkpoints_dir_dql=self.store.paths.dqn_checkpoints_dir
+            checkpoints_dir_dql=self.store.paths.dqn_checkpoints_dir,
             mode='both'
         )

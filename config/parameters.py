@@ -33,12 +33,15 @@ class Parameters :
 
                     gamma: float = 0.99,
                     _greedy_mode: bool = False,
+                    
                     learning_rate_init: float = 5e-4,
                     learning_rate_decay: float = 0.99,
                     learning_rate_min: float = 1e-4,
+
                     epsilon_init: float = 1.0,
                     epsilon_decay: float = 0.999,
                     epsilon_min: float = 0.01,
+
                     delta_init: float = 1e-1,
                     delta_decay: float = 1,
                     delta_min: float = 5 * 1e-2, 

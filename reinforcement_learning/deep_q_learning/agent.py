@@ -65,7 +65,7 @@ class DeepQLearningAgent():
         self.update_step = 0 # Count how many gradients have been performed
 
         # ---- Dataset ----
-        self.dataset_train,self.dataset_test = self.environment.get_dataset()
+        self.dataset_train = self.environment.get_dataset()
 
         # ---- Device ----
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -165,7 +165,7 @@ class DeepQLearningAgent():
                 
                 ## Set the prior at the initial state
                 self.environment.reset_prior()
-                len_window_channel = self.parameters.len_window_channel
+                len_window_channel = self.simu_parameters.len_window_channel
                 
                 # Training : Pick a random channel from dataset
                 index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
@@ -335,10 +335,10 @@ class DeepQLearningAgent():
         )
 
         # Save the records of average losses, length of path and epsilon
-        save_Data(self.paths.root, avg_losses, avg_len_path, epsilons)
+        save_Data(self.paths, avg_losses, avg_len_path, epsilons)
 
         # Plot the convergence of the algorithm
-        plot_Convergence(self.paths.root, avg_losses, avg_len_path)
+        plot_Convergence(self.paths, avg_losses, avg_len_path)
         # The NN trained is a function that must find the optimal policy
         return self.evaluation_q_network
         

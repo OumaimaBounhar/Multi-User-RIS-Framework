@@ -50,7 +50,7 @@ def plot_Convergence(
     plt.title("Convergence of DQN Algorithm loss")
     plt.xlabel("Epoch")
     plt.ylabel("Average loss")
-    plt.savefig(paths.dqn_loss_plot())
+    plt.savefig(paths.dqn_loss_plot)
     plt.close()
     
     # Plot Path Length
@@ -59,7 +59,7 @@ def plot_Convergence(
     plt.title("Convergence of DQN Algorithm number action") 
     plt.xlabel("Epoch")
     plt.ylabel("Average len path")
-    plt.savefig(paths.dqn_path_plot())
+    plt.savefig(paths.dqn_path_plot)
     plt.close()
 
 #---------------------------------------- Reporting ------------------------------------------------------------------------------
@@ -70,8 +70,7 @@ def save_Data(
         avg_len_path, 
         epsilons
 ):
-
-    os.makedirs(paths.checkpoints_dir, exist_ok=True)
+    os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
     
     # Save loss values in a CSV file
     np.savetxt(
@@ -103,7 +102,7 @@ def save_Data(
     print(f"[INFO] Losses saved to {paths.dqn_metrics_csv('losses')}")
     print(f"[INFO] Average path lengths saved to {paths.dqn_metrics_csv('avgLenPath')}")
     print(f"[INFO] Epsilon values saved to {paths.dqn_metrics_csv('epsilons')}")
-    print(f"[INFO] DQN Metrics saved in {paths.checkpoints_dir}")
+    print(f"[INFO] DQN Metrics saved in {paths.dqn_checkpoints_dir}")
             
 def save_model_complexity(
                             model,

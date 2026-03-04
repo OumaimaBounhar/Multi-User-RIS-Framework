@@ -97,6 +97,7 @@ class Environment():
 
             else : 
                 reward = -1.0
+                is_terminal = False
             
             info = {
                 "delta" : self.delta,
