@@ -58,7 +58,7 @@ def main():
                                         gamma=0.94,
                                         _greedy_mode = False,
 
-                                        learning_rate_init=5e-5,
+                                        learning_rate_init=1e-4,
                                         learning_rate_decay = 0.99,
                                         learning_rate_min = 1e-6,
 
@@ -73,19 +73,19 @@ def main():
 
                                         params_list=[256,256],
                                         loss_fct='mse',
-                                        batch_size=1024,
+                                        batch_size=256,
                                         replay_buffer_memory_size=120000,
 
                                         max_norm=0.5,
                                         do_gradient_clipping = True,
 
-                                        n_epochs=100,
+                                        n_epochs=1000,
                                         # n_epochs = 1,
                                         n_time_steps_dqn=64,
                                         n_channels_train_DQN=5,
                                         # n_channels_train_DQN=1,
                                         
-                                        n_episodes=100,
+                                        n_episodes=1000,
                                         # n_episodes=1,
                                         n_time_steps_ql=64,
                                         n_channels_train_QL=5,
@@ -93,17 +93,17 @@ def main():
                                         max_len_path=20,
                                         len_path=20,
                                         
-                                        tau = 0.05,
-                                        freq_update_target=20,
+                                        tau = 0.005,
+                                        freq_update_target=100,
                                         targetNet_update_method = "soft",
                                         
                                         Train_Deep_Q_Learning=True,
-                                        saving_freq_DQN=10,
+                                        saving_freq_DQN=50,
                                         # saving_freq_DQN=1,
                                         test_freq_DQN=1,
 
                                         Train_Q_Learning=True,
-                                        saving_freq_QL = 10,
+                                        saving_freq_QL = 50,
                                         # saving_freq_QL = 1,
                                         test_freq_QL = 1,
                                         

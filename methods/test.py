@@ -17,6 +17,8 @@ from experiments.store import ExperimentPaths
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 from reinforcement_learning.q_learning.utils import load_Policy
 
+from reinforcement_learning.deep_q_learning.utils.seed import set_seed
+
 class Test:
     """ Consolidates testing logic for Q-Learning and Deep Q-Learning. """
     
@@ -99,6 +101,8 @@ class Test:
             
             print(f'[INFO] Testing Mode: {mode} | SNR: {SNR} | Epoch: {epoch} | Std Noise: {self.parameters.std_noise}')
             
+            set_seed(1000 + SNR + epoch)
+
             for _ in tqdm(range(n_ex)):
                 objs["channel"].new_channel() # New channel
                 methods.forget() # We reinitialize the different algorithms
@@ -269,6 +273,9 @@ class Test:
 
                 # Extract epoch number from filename (assuming format 'checkpoint_epoch_eval.pth')
                 epoch = int(f.split('_')[1])
+                
+                # Reseed to ensure reproducible test conditions
+                set_seed(42 + epoch)
 
                 if epoch % self.parameters.test_freq_DQN != 0:
                     continue

@@ -14,6 +14,7 @@ from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 from methods.methods import Methods
 from methods.test import Test
 
+
 class Runner:
     """ This class is responsible for running the experiments of Q-Learning and Deep Q-Learning. It executes the training and testing loops.
     """
