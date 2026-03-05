@@ -256,69 +256,72 @@ class Test:
         paths = ExperimentPaths(root=testing_objects_dict["filename"])
 
         # Logic to find checkpoints based on mode
-        if mode == 'both' or mode == 'dqn':
-            dqn_files = sorted(
-                [
-                    f for f in os.listdir(checkpoints_dir_dql) 
-                    if f.endswith('_eval.pth')
-                ]
-            )
+        if mode in ('both', 'dqn'):
+            dqn_files = [
+                f for f in os.listdir(checkpoints_dir_dql) 
+                if f.endswith('_eval.pth')
+            ]
+
+            # sSort name of files by epoch number
+            dqn_files.sort(key=lambda x: int(x.split('_')[1]))
 
             for f in dqn_files:
-                epoch_digits = ''.join(filter(str.isdigit, f))
 
-                if not epoch_digits:
+                # Extract epoch number from filename (assuming format 'checkpoint_epoch_eval.pth')
+                epoch = int(f.split('_')[1])
+
+                if epoch % self.parameters.test_freq_DQN != 0:
                     continue
 
-                epoch = int(epoch_digits)
+                if self.DQN is None:
+                    raise ValueError("DQN agent is required to run DQN checkpoint tests.")
 
-                if epoch % self.parameters.test_freq_DQN == 0:
+                device = next(self.DQN.evaluation_q_network.parameters()).device
 
-                    if self.DQN is None:
-                        raise ValueError("DQN agent is required to run DQN checkpoint tests.")
-                    
-                    device = self.DQN.device
-                    
-                    state_dict = torch.load(os.path.join(checkpoints_dir_dql, f), map_location=device)
+                checkpoint_path = os.path.join(checkpoints_dir_dql, f)
 
-                    self.DQN.evaluation_q_network.load_state_dict(state_dict)
+                state_dict = torch.load(checkpoint_path, map_location=device)
 
-                    self.DQN.evaluation_q_network.to(device)
-                    self.DQN.evaluation_q_network.eval()
+                self.DQN.evaluation_q_network.load_state_dict(state_dict)
 
-                    policy_ql = None
+                self.DQN.evaluation_q_network.to(device)
+                self.DQN.evaluation_q_network.eval()
 
-                    if mode == 'both':
-                        # Attempt to find matching QL policy by epoch
-                        try:
-                            policy_ql = load_Policy(
-                                paths= paths,
-                                episode = epoch
-                            )
-                            
-                        except FileNotFoundError:
-                            policy_ql = None
-                            
-                    self.test(
-                        testing_objects_dict, 
-                        epoch, 
-                        mode=mode, 
-                        policy_network=self.DQN.evaluation_q_network, 
-                        policy_ql=policy_ql
-                    )
+                policy_ql = None
+
+                if mode == 'both':
+                    # Attempt to find matching QL policy by epoch
+                    try:
+                        policy_ql = load_Policy(
+                            paths= paths,
+                            episode = epoch
+                        )
+                        
+                    except FileNotFoundError:
+                        policy_ql = None
+                        
+                self.test(
+                    testing_objects_dict, 
+                    epoch, 
+                    mode=mode, 
+                    policy_network=self.DQN.evaluation_q_network, 
+                    policy_ql=policy_ql
+                )
                     
         elif mode == 'ql':
 
-            ql_files = sorted(
-                [
-                    f for f in os.listdir(checkpoints_dir_ql) 
-                    if f.startswith('policy_after_')
-                ]
-            )
+            ql_files = [
+                f for f in os.listdir(checkpoints_dir_ql) 
+                if f.startswith('policy_after_') 
+                and f.endswith('.csv')
+            ]
+
+            # Sort name of files by episode (epoch) number (assuming format 'policy_after_X_episodes.csv')
+            ql_files.sort(key=lambda x: int(x.split('_')[2].replace('episodes.csv','')))
 
             for f in ql_files:
 
-                epoch = int(''.join(filter(str.isdigit, f.split('_after_')[-1])))
+                epoch = int(f.split('_')[2].replace('episodes.csv',''))
 
                 if epoch % self.parameters.test_freq_QL == 0:
 

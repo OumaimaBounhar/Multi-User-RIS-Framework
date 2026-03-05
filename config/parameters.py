@@ -283,10 +283,26 @@ class Parameters :
             "size_codebooks" :self.size_codebooks
         }
     
-    def save_to_file(self, filename, params_type='dqn'):
-        # Save the parameters to a file, based on the type
-        params = self.get_dqn_parameters() if params_type == 'dqn' else self.get_q_learning_parameters()
+    def save_to_file(self, filename, params_type='both'):
+        """
+        Save parameters to a file depending on the selected mode.
+        Args:
+            filename (str): The name of the file to save the parameters to.
+            params_type (str): The type of parameters to save ('dqn', 'ql', or 'both'). Default is 'both'.
+        """
+
         with open(filename, 'w') as file:
-            for key, value in params.items():
-                file.write(f"{key}: {value}\n")
-                
+
+            if params_type in ('dqn', 'both'):
+                file.write("=== DQN PARAMETERS ===\n")
+                params_dqn = self.get_dqn_parameters()
+                for key, value in params_dqn.items():
+                    file.write(f"{key}: {value}\n")
+                file.write("\n")
+
+            if params_type in ('ql', 'both'):
+                file.write("=== Q-LEARNING PARAMETERS ===\n")
+                params_ql = self.get_q_learning_parameters()
+                for key, value in params_ql.items():
+                    file.write(f"{key}: {value}\n")
+                file.write("\n")

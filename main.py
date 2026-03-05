@@ -76,13 +76,16 @@ def main():
                                         batch_size=1024,
                                         replay_buffer_memory_size=120000,
 
-                                        n_epochs=10000,
+                                        max_norm=0.5,
+                                        do_gradient_clipping = True,
+
+                                        n_epochs=100,
                                         # n_epochs = 1,
                                         n_time_steps_dqn=64,
                                         n_channels_train_DQN=5,
                                         # n_channels_train_DQN=1,
                                         
-                                        n_episodes=10000,
+                                        n_episodes=100,
                                         # n_episodes=1,
                                         n_time_steps_ql=64,
                                         n_channels_train_QL=5,
@@ -93,17 +96,14 @@ def main():
                                         tau = 0.05,
                                         freq_update_target=20,
                                         targetNet_update_method = "soft",
-
-                                        max_norm=0.5,
-                                        do_gradient_clipping = True,
                                         
                                         Train_Deep_Q_Learning=True,
-                                        saving_freq_DQN=500,
+                                        saving_freq_DQN=10,
                                         # saving_freq_DQN=1,
                                         test_freq_DQN=1,
 
                                         Train_Q_Learning=True,
-                                        saving_freq_QL = 500,
+                                        saving_freq_QL = 10,
                                         # saving_freq_QL = 1,
                                         test_freq_QL = 1,
                                         
