@@ -1,8 +1,12 @@
+import matplotlib
+matplotlib.use("Agg")  # backend sans affichage (serveur/headless)
+import matplotlib.pyplot as plt
+
 import os
 import torch
 import numpy as np 
 from typing import Union
-from matplotlib import pyplot as plt 
+
 from experiments.store import ExperimentPaths
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------

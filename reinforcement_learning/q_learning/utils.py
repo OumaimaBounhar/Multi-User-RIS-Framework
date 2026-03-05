@@ -1,8 +1,12 @@
+import matplotlib
+matplotlib.use("Agg")  # backend sans affichage (serveur/headless)
+import matplotlib.pyplot as plt
+
 import os, csv
 import numpy as np
 import pandas as pd
 from typing import List
-import matplotlib.pyplot as plt
+
 from experiments.store import ExperimentPaths
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------

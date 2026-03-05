@@ -27,7 +27,8 @@ def main():
     delta_values = [
                     # 3e-1,
                     # 2e-1,
-                    1e-2,
+                    1e-1, # session DQL Example_6
+                    # 1e-2, # session dql Example_5
                     # 2e-2
                     ]
 
@@ -45,8 +46,8 @@ def main():
                                         codebook_specs=codebook_specs,
 
                                         SNR=10,
-                                        # snr_values = [0,5,10,20],
-                                        snr_values = [20],
+                                        snr_values = [0,5,10,20],
+                                        # snr_values = [20],
                                         type_channel="half-spaced ULAs",
                                         type_modulation="BPSK", 
                                         mean_noise=0,
@@ -66,7 +67,8 @@ def main():
                                         epsilon_min=0.01,
 
                                         delta_init=delta,
-                                        delta_decay=0.99,
+                                        # delta_decay=0.99,
+                                        delta_decay=1,
                                         delta_min=1e-3, 
 
                                         params_list=[256,256],
@@ -74,17 +76,17 @@ def main():
                                         batch_size=1024,
                                         replay_buffer_memory_size=120000,
 
-                                        # n_epochs=10000,
-                                        n_epochs = 1,
+                                        n_epochs=10000,
+                                        # n_epochs = 1,
                                         n_time_steps_dqn=64,
-                                        # n_channels_train_DQN=5,
-                                        n_channels_train_DQN=1,
+                                        n_channels_train_DQN=5,
+                                        # n_channels_train_DQN=1,
                                         
-                                        # n_episodes=10000,
-                                        n_episodes=1,
+                                        n_episodes=10000,
+                                        # n_episodes=1,
                                         n_time_steps_ql=64,
-                                        # n_channels_train_QL=5,
-                                        n_channels_train_QL=1,
+                                        n_channels_train_QL=5,
+                                        # n_channels_train_QL=1,
                                         max_len_path=20,
                                         len_path=20,
                                         
@@ -96,13 +98,13 @@ def main():
                                         do_gradient_clipping = True,
                                         
                                         Train_Deep_Q_Learning=True,
-                                        # saving_freq_DQN=500,
-                                        saving_freq_DQN=1,
+                                        saving_freq_DQN=500,
+                                        # saving_freq_DQN=1,
                                         test_freq_DQN=1,
 
                                         Train_Q_Learning=True,
-                                        # saving_freq_QL = 500,
-                                        saving_freq_QL = 1,
+                                        saving_freq_QL = 500,
+                                        # saving_freq_QL = 1,
                                         test_freq_QL = 1,
                                         
                                         precision=2,  

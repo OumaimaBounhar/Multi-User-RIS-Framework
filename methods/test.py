@@ -1,10 +1,13 @@
+import matplotlib
+matplotlib.use("Agg")  # backend sans affichage (serveur/headless)
+import matplotlib.pyplot as plt
+
 import os
 import math
 import torch
 import numpy as np 
 import pandas as pd
 from tqdm import tqdm
-from matplotlib import pyplot as plt
 
 from methods.methods import Methods
 from systemModel.channel import Channel

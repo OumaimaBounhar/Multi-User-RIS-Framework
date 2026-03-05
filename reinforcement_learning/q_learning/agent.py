@@ -137,7 +137,7 @@ class QLearningAgent():
             q_values = self.Q_matrix[state_index]
             max_q = np.max(q_values) ## np.argmax returns the first index even if many q-values are equal (initially...)
             best_actions = np.flatnonzero(np.isclose(q_values, max_q)) ## If we have many q_values equal at the
-            action_index = int(np.random.choice(best_actions)) ## To avoid selecting the
+            action_index = int(np.random.choice(best_actions)) ## To avoid selecting the same action at the beginning when all q-values are equal, we randomly select among the best actions
         else:
             action_index = int(np.random.randint(self.n_actions))
         
@@ -247,10 +247,11 @@ class QLearningAgent():
             self.learning_rate_schedule.init_value
         )
         
-        smoothed_avg_len = np.convolve(avg_len_train_epoch, np.ones(10)/10, mode='valid')
         
-        plot_Convergence(self.paths, smoothed_avg_len)
         save_training_metrics(self.paths, avg_len_train_epoch)
+
+        smoothed_avg_len = np.convolve(avg_len_train_epoch, np.ones(10)/10, mode='valid')
+        plot_Convergence(self.paths, smoothed_avg_len)
         
     def train_one_episode(self, epsilon: float, delta: float, alpha: float, gamma: float):
         """ 

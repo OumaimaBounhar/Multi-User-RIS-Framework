@@ -1,3 +1,5 @@
+# Create a class Schedule and the other classes should heritate from it, here we are duplicating many params and asserts
+
 class multiplicativeDecaySchedule:
     """ 
 
