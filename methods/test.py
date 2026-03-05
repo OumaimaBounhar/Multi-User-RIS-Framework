@@ -17,7 +17,7 @@ from experiments.store import ExperimentPaths
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 from reinforcement_learning.q_learning.utils import load_Policy
 
-from reinforcement_learning.deep_q_learning.utils.seed import set_seed
+from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
 class Test:
     """ Consolidates testing logic for Q-Learning and Deep Q-Learning. """

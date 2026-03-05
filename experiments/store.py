@@ -59,32 +59,30 @@ class ExperimentPaths:
             "Q_matrices"
         )
 
-    def q_matrix_file(self, episode: int, is_last: bool = False) -> str:
+    def q_matrix_file(self, episode: int) -> str:
         """ Save the Q-matrix as a CSV file
         Args:
-            episode (int): The episode number after which the Q-matrix is saved.
-            is_last (bool): Whether this is the final Q-matrix after training completion. If True, the filename will indicate it's the last one.
+            episode (int): The episode number after which the Q-matrix is saved
         Returns:
-            str: The path to save the Q-matrix CSV file.
+            str: The path to save the Q-matrix CSV file
         """
-        prefix = "Q_matrix_final_after_" if is_last else f"Q_matrix_after_"
+        
         return os.path.join(
             self.q_matrices_dir, 
-            f"{prefix}{episode}episodes.csv"
+            f"Q_matrix_after_{episode}episodes.csv"
         )
 
-    def policy_matrix_file(self, episode: int, is_last: bool = False) -> str:
+    def policy_matrix_file(self, episode: int) -> str:
         """ Save the policy matrix as a CSV file
         Args:
-            episode (int): The episode number after which the policy matrix is saved.
-            is_last (bool): Whether this is the final policy matrix after training completion. If True, the filename will indicate it's the last one.
+            episode (int): The episode number after which the policy matrix is saved
         Returns:
             str: The path to save the policy matrix CSV file.
         """
-        prefix = "policy_final_after_" if is_last else f"policy_after_"
+        
         return os.path.join(
             self.q_matrices_dir, 
-            f"{prefix}{episode}episodes.csv"
+            f"policy_after_{episode}episodes.csv"
         )
 
     def ql_frequency_matrix_file(self, n_episodes, delta, alpha) -> str:

@@ -331,7 +331,8 @@ class DeepQLearningAgent():
             self.paths, 
             "last", 
             self.evaluation_q_network, 
-            self.target_q_network
+            self.target_q_network,
+            final_epoch = self.n_epochs
         )
 
         # Save the records of average losses, length of path and epsilon

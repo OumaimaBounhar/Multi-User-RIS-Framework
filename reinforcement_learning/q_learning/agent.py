@@ -228,15 +228,13 @@ class QLearningAgent():
         save_Policy_matrix(
             self.paths, 
             final_policy, 
-            self.n_episodes, 
-            is_last=True
+            self.n_episodes
         )
 
         save_Q_matrix(
             self.paths,
             self.Q_matrix, 
-            self.n_episodes, 
-            is_last=True
+            self.n_episodes
         )
         
         save_frequency_update_per_state(

@@ -15,7 +15,8 @@ def save_dqn_weights(
         paths: ExperimentPaths,
         epoch: Union[int, str], 
         eval_net, 
-        target_net
+        target_net,
+        final_epoch=None
 ):
     """Save DQN model checkpoints for both evaluation and target networks.
 
@@ -25,6 +26,11 @@ def save_dqn_weights(
         eval_net: The evaluation Q-network
         target_net: The target Q-network
     """
+
+    if epoch == "last":
+        if final_epoch is None:
+            raise ValueError("final_epoch must be provided when epoch='last'")
+        epoch = final_epoch
 
     # Ensure the 'checkpoints' directory exists
     os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
@@ -37,9 +43,7 @@ def save_dqn_weights(
     torch.save(eval_net.state_dict(), eval_path)
     torch.save(target_net.state_dict(), target_path)
 
-    # 4. Feedback
-    label = f"Epoch {epoch}" if isinstance(epoch, int) else "last"
-    print(f"[INFO] {label} weights saved to {paths.dqn_checkpoints_dir}")
+    print(f"[INFO] Epoch {epoch} weights saved to {paths.dqn_checkpoints_dir}")
 
 #---------------------------------------- Visualization  ------------------------------------------------------------------------------
 

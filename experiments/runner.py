@@ -49,8 +49,7 @@ class Runner:
         # Load the newly trained policy
         return load_Policy(
             paths = self.store.paths,
-            episode = self.parameters.n_episodes,
-            is_last=True
+            episode = self.parameters.n_episodes
         )
     
     def run_deep_q_learning(self):
