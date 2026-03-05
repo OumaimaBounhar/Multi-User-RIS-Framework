@@ -1,8 +1,11 @@
+import matplotlib
+matplotlib.use("Agg")  # backend sans affichage (serveur/headless)
+import matplotlib.pyplot as plt
+
 import scipy.stats
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
 def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
