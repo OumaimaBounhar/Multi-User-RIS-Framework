@@ -10,7 +10,7 @@ def dqn_learn_update_step(
         action_batch,
         reward_batch,
         next_state_batch,
-        done_batch,
+        terminated_batch,
         gamma,
         do_gradient_clipping,
         max_norm,
@@ -27,15 +27,35 @@ def dqn_learn_update_step(
         # PyTorch rule: Any tensor participating in gradient-based math must be floating-point
 
         # Convert batches to tensors on correct device
-        current_state_tensor = torch.as_tensor(current_state_batch, dtype= torch.float32, device= device)
+        current_state_tensor = torch.as_tensor(
+                current_state_batch, 
+                dtype= torch.float32, 
+                device= device
+        )
 
-        next_state_tensor = torch.as_tensor(next_state_batch, dtype= torch.float32, device= device)
+        next_state_tensor = torch.as_tensor(
+                next_state_batch, 
+                dtype= torch.float32, 
+                device= device
+        )
 
-        actions_tensor = torch.as_tensor(action_batch, dtype= torch.long, device= device).view(-1) #long for integers in PyTorch, dim(actions) = (memory_size=B,1) and gather() in torch expects dim like (X,) that's why we need to flatten here. Don't use squeeze() because if B=1, (B,1) -> scalar.
+        actions_tensor = torch.as_tensor(
+                action_batch, 
+                dtype= torch.long, 
+                device= device
+        ).view(-1) #long for integers in PyTorch, dim(actions) = (memory_size=B,1) and gather() in torch expects dim like (X,) that's why we need to flatten here. Don't use squeeze() because if B=1, (B,1) -> scalar.
 
-        rewards_tensor = torch.as_tensor(reward_batch, dtype= torch.float32, device= device).view(-1) #Even if rewards only take 0 or -1 a values, they are input to a continuous function, NN operates in floats, the update of the target would return an error if the reward is an integer.
+        rewards_tensor = torch.as_tensor(
+                reward_batch, 
+                dtype= torch.float32, 
+                device= device
+        ).view(-1) #Even if rewards only take 0 or -1 a values, they are input to a continuous function, NN operates in floats, the update of the target would return an error if the reward is an integer.
 
-        done_tensor = torch.as_tensor(done_batch, dtype= torch.float32, device= device).view(-1)
+        terminated_tensor = torch.as_tensor(
+                terminated_batch, 
+                dtype= torch.float32, 
+                device= device
+        ).view(-1)
 
         # Calculate Q(s,a) from evaluation network
         eval_net.train()
@@ -49,7 +69,7 @@ def dqn_learn_update_step(
                 target_net.eval() 
                 q_values_next = target_net(next_state_tensor)
                 max_q_values_next = q_values_next.max(dim=1)[0]
-                bootstrap_mask = 1 - done_tensor
+                bootstrap_mask = 1 - terminated_tensor
                 target_q_values = rewards_tensor + gamma * bootstrap_mask * max_q_values_next
 
         # Calculate the loss between the predicted and target Q-values

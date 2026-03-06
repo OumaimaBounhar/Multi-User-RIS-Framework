@@ -37,7 +37,10 @@ class DQN(nn.Module):
         #Loss function
         if loss_fct == 'mse':
             self.loss_fct = nn.MSELoss()
-        
+
+        elif loss_fct == 'huber':
+            self.loss_fct = nn.SmoothL1Loss() # Huber loss    
+
     def forward(self, state):
         q_value = self.network(state)
         return q_value

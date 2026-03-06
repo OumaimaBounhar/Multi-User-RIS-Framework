@@ -14,12 +14,12 @@ class ReplayBuffer():
         self.next_state_memory = np.zeros([replay_buffer_memory_size, input_dims], dtype=np.float32)
         self.action_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.int64)
         self.reward_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.float32)
-        self.done_memory = np.zeros([replay_buffer_memory_size,1], dtype=np.float32)
+        self.terminated_memory  = np.zeros([replay_buffer_memory_size,1], dtype=np.float32)
         
         #Index to keep track of where to store the data
         self.idx = 0
         
-    def store_transition(self, current_state, action, reward, next_state, done):
+    def store_transition(self, current_state, action, reward, next_state, terminated):
         # Update the index, wrapping around when it exceeds the memory size
         self.idx = self.memory_counter % self.replay_buffer_memory_size
         
@@ -28,7 +28,7 @@ class ReplayBuffer():
         self.action_memory[self.idx] = action
         self.reward_memory[self.idx] = reward
         self.next_state_memory[self.idx] = next_state
-        self.done_memory[self.idx] = float(done) # (float(True) -> 1.0 -> terminated / float(False) -> 0.0 -> truncated)
+        self.terminated_memory [self.idx] = float(terminated) # (float(True) -> 1.0 -> true terminal state / float(False) -> 0.0 -> truncated)
         
         #Increment the counter
         self.memory_counter += 1
@@ -42,7 +42,7 @@ class ReplayBuffer():
         next_state_batch = self.next_state_memory[batch_indices]
         action_batch = self.action_memory[batch_indices]
         reward_batch = self.reward_memory[batch_indices]
-        done_batch = self.done_memory[batch_indices]
+        terminated_batch = self.terminated_memory [batch_indices]
         
         #self.reinitialize_buffer()
-        return current_state_batch, action_batch, reward_batch, next_state_batch, done_batch
+        return current_state_batch, action_batch, reward_batch, next_state_batch, terminated_batch

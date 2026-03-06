@@ -189,7 +189,10 @@ class DeepQLearningAgent():
                             self.environment.reset_curse_dimension()
 
                         # Action selection
-                        index_action = self.choose_action(current_state, epsilon)
+                        index_action = self.choose_action(
+                            current_state, 
+                            epsilon
+                        )
                         
                         # Environment step    
                         next_state, reward, terminated, truncated, _ = self.environment.step(
@@ -205,13 +208,19 @@ class DeepQLearningAgent():
                         time_limit_reached = (path == self.max_len_path - 1)
                         truncated = (time_limit_reached and not terminated)
 
-                        done = terminated or truncated
+                        episode_over  = terminated or truncated
                             
                         # Store the transition in the replay buffer training
-                        self.replay_buffer.store_transition(current_state, index_action, reward, next_state, done)
+                        self.replay_buffer.store_transition(
+                            current_state, 
+                            index_action, 
+                            reward, 
+                            next_state, 
+                            terminated
+                        )
                             
                         current_state = next_state
-                        if done:
+                        if episode_over:
                             break
 
                     epoch_path_lengths.append(path_len)
@@ -219,7 +228,7 @@ class DeepQLearningAgent():
                     #------------------- Learning step (only if the buffer has enough samples) ------------------
                     if self.replay_buffer.memory_counter >= self.batch_size:
                         # Sample a batch from the Replay Buffer
-                        current_state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.replay_buffer.sample_buffer()
+                        current_state_batch, action_batch, reward_batch, next_state_batch, terminated_batch = self.replay_buffer.sample_buffer()
                         
                         # Start the training process
                         loss_value = dqn_learn_update_step(
@@ -230,7 +239,7 @@ class DeepQLearningAgent():
                                                             action_batch, 
                                                             reward_batch, 
                                                             next_state_batch,
-                                                            done_batch,
+                                                            terminated_batch,
                                                             self.gamma, 
                                                             self.do_gradient_clipping, 
                                                             self.max_norm )
