@@ -15,6 +15,9 @@ class Parameters :
     For DQN/Q-Learning: Various hyperparameters like gamma, learning_rate, etc.
     """
     def __init__(   self, 
+                    
+                    experiment_note: str = "",
+                    
                     N_R:int = 64, 
                     N_T:int = 1, 
                     N_RIS:int = 100, 
@@ -80,6 +83,9 @@ class Parameters :
                     min_representatives_q_learning_test: int = 10
                     ) :
         
+        ### More details about the experiment ###
+        self.experiment_note = experiment_note
+
         ### For the channel ###
         self.N_R = N_R # Number antennas at the Receiver
         self.N_T = N_T # Number antennas at the Transmitter
@@ -309,7 +315,10 @@ class Parameters :
         """
 
         with open(filename, 'w') as file:
-
+            
+            if self.experiment_note:
+                file.write(f"\nExperiment note: {self.experiment_note}\n")
+                
             file.write("=== COMMON PARAMETERS ===\n")
             common_params = self.get_common_parameters()
             for key, value in common_params.items():

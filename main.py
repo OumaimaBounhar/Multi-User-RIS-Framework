@@ -38,77 +38,81 @@ def main():
             print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
             print("="*80)
 
-            parameters = Parameters(    N_R=64, 
-                                        N_T=1, 
-                                        N_RIS=100, 
+            parameters = Parameters(    
+                experiment_note = "In this experiment, no RSE noise was used in the methods.",
+                N_R=64, 
+                N_T=1, 
+                N_RIS=100, 
 
-                                        size_codebooks=size_codebooks, 
-                                        codebook_specs=codebook_specs,
+                size_codebooks=size_codebooks, 
+                codebook_specs=codebook_specs,
 
-                                        SNR=10,
-                                        # snr_values = [0,5,10,20],
-                                        snr_values = [20],
-                                        type_channel="half-spaced ULAs",
-                                        type_modulation="BPSK", 
-                                        mean_noise=0,
-                                        mean_channel=0, 
-                                        std_channel=[], 
-                                        sigma_alpha=0, 
+                SNR=10,
+                # snr_values = [0,5,10,20],
+                snr_values = [20],
+                type_channel="half-spaced ULAs",
+                type_modulation="BPSK", 
+                mean_noise=0,
+                mean_channel=0, 
+                std_channel=[], 
+                sigma_alpha=0, 
 
-                                        gamma=0.94,
-                                        _greedy_mode = False,
+                gamma=0.94,
+                _greedy_mode = False,
 
-                                        learning_rate_init=1e-4,
-                                        learning_rate_decay = 0.99,
-                                        learning_rate_min = 1e-6,
+                learning_rate_init=1e-4,
+                learning_rate_decay = 0.99,
+                learning_rate_min = 1e-6,
 
-                                        epsilon_init=1,
-                                        epsilon_decay=0.992,
-                                        epsilon_min=0.01,
+                epsilon_init=1,
+                epsilon_decay=0.992,
+                epsilon_min=0.01,
 
-                                        delta_init=delta,
-                                        # delta_decay=0.99,
-                                        delta_decay=1,
-                                        delta_min=1e-3, 
+                delta_init=delta,
+                # delta_decay=0.99,
+                delta_decay=1,
+                delta_min=1e-3, 
 
-                                        params_list=[256,256],
-                                        loss_fct='mse',
-                                        batch_size=256,
-                                        replay_buffer_memory_size=120000,
+                params_list=[256,256],
+                loss_fct='mse',
+                batch_size=256,
+                replay_buffer_memory_size=120000,
 
-                                        n_epochs=1000,
-                                        # n_epochs = 2,
-                                        n_time_steps_dqn=64,
-                                        n_channels_train_DQN=5,
-                                        # n_channels_train_DQN=1,
-                                        
-                                        n_episodes=1000,
-                                        # n_episodes=2,
-                                        n_time_steps_ql=64,
-                                        n_channels_train_QL=5,
-                                        # n_channels_train_QL=1,
-                                        max_len_path=20,
-                                        len_path=20,
+                n_epochs=1000,
+                # n_epochs = 2,
+                n_time_steps_dqn=64,
+                n_channels_train_DQN=5,
+                # n_channels_train_DQN=1,
+                
+                n_episodes=1000,
+                # n_episodes=2,
+                n_time_steps_ql=64,
+                n_channels_train_QL=5,
+                # n_channels_train_QL=1,
+                max_len_path=20,
+                len_path=20,
 
-                                        max_norm=0.5,
-                                        do_gradient_clipping = True,
-                                        
-                                        tau = 0.001,
-                                        freq_update_target=100,
-                                        targetNet_update_method = "soft",
-                                        
-                                        Train_Deep_Q_Learning=True,
-                                        Train_Q_Learning=True,
-                                        saving_freq=100,
-                                        # saving_freq=1,
-                                        test_freq=1,
-                                        
-                                        precision=2,  
-                                        len_window_channel=10,
-                                        modification_channel=0,
-                                        min_representatives_q_learning_train=100,
-                                        min_representatives_q_learning_test=10
-                                        ) # All the parameters stored in a class
+                max_norm=0.5,
+                do_gradient_clipping = True,
+                
+                tau = 0.001,
+                freq_update_target=100,
+                targetNet_update_method = "soft",
+                
+                Train_Deep_Q_Learning=True,
+                Train_Q_Learning=True,
+                saving_freq=100,
+                # saving_freq=1,
+                test_freq=1,
+                
+                precision=2,  
+                len_window_channel=10,
+                modification_channel=0,
+                min_representatives_q_learning_train=100,
+                min_representatives_q_learning_test=10
+            ) 
+
+            # parameters.experiment_note = "In this experiment, the RSE noise was disabled in the methods."
 
             paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
 
