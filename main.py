@@ -39,7 +39,8 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "In this experiment, no RSE noise was used in the methods.",
+                experiment_note = "In this experiment, no RSE noise was used in the methods. We map 8 to 256 to 256 to 14. Raised gamma value to 0.98.",
+
                 N_R=64, 
                 N_T=1, 
                 N_RIS=100, 
@@ -57,7 +58,7 @@ def main():
                 std_channel=[], 
                 sigma_alpha=0, 
 
-                gamma=0.94,
+                gamma=0.98,
                 _greedy_mode = False,
 
                 learning_rate_init=1e-4,
@@ -78,13 +79,13 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=1000,
+                n_epochs=500,
                 # n_epochs = 2,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=1000,
+                n_episodes=500,
                 # n_episodes=2,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
@@ -101,7 +102,7 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=100,
+                saving_freq=50,
                 # saving_freq=1,
                 test_freq=1,
                 
@@ -112,7 +113,7 @@ def main():
                 min_representatives_q_learning_test=10
             ) 
 
-            # parameters.experiment_note = "In this experiment, the RSE noise was disabled in the methods."
+            print(f"\nExperiment note: {parameters.experiment_note}\n")
 
             paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
 
