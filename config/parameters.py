@@ -61,20 +61,17 @@ class Parameters :
                     max_len_path: int = 20,
                     len_path: int = 10,
 
+                    max_norm: float =1,
+                    do_gradient_clipping: bool = True,
+
                     tau: float = 0.05,
                     freq_update_target: int = 1000,
                     targetNet_update_method : str = "soft",
-
-                    max_norm: float =1,
-                    do_gradient_clipping: bool = True,
                     
                     Train_Deep_Q_Learning: bool = True,
-                    saving_freq_DQN: int = 1,
-                    test_freq_DQN: int = 1,
-
                     Train_Q_Learning: bool = False,
-                    saving_freq_QL: int = 1,
-                    test_freq_QL: int = 1,
+                    saving_freq: int = 1,
+                    test_freq: int = 1,
 
                     precision: int = 2,  
                     len_window_channel:int = 10,
@@ -122,6 +119,9 @@ class Parameters :
             ]
         self.codebook_specs = codebook_specs # Communication / Pilots
         
+        self.saving_freq = saving_freq
+        self.test_freq = test_freq
+
         ### For Q-Learning parameters ###
         self.n_episodes = n_episodes
         self.n_channels_train_QL = n_channels_train_QL
@@ -135,8 +135,6 @@ class Parameters :
         self.learning_rate_min = learning_rate_min
 
         self.Train_Q_Learning = Train_Q_Learning
-        self.saving_freq_QL= saving_freq_QL
-        self.test_freq_QL = test_freq_QL
         
         self.precision = precision
         self.len_window_channel = len_window_channel
@@ -175,8 +173,6 @@ class Parameters :
         self.targetNet_update_method = targetNet_update_method
 
         self.Train_Deep_Q_Learning = Train_Deep_Q_Learning
-        self.saving_freq_DQN = saving_freq_DQN
-        self.test_freq_DQN = test_freq_DQN
         
         
     def get_channels_parameters(self):
@@ -205,6 +201,27 @@ class Parameters :
         self.mean_noise = mean_noise
         self.std_noise = std_noise
         # print(f'std noise = {std_noise}')
+    
+    def get_common_parameters(self):
+        return {
+            # System / channel
+            "N_R": self.N_R,
+            "N_T": self.N_T,
+            "N_RIS": self.N_RIS,
+            "type_channel": self.type_channel,
+            "sigma_alpha": self.sigma_alpha,
+
+            # Noise / signal
+            "SNR": self.SNR,
+            "snr_values": self.snr_values,
+            "mean_noise": self.mean_noise,
+            "std_noise": self.std_noise,
+            "type_modulation": self.type_modulation,
+
+            # Codebooks
+            "codebook_specs": [vars(spec) for spec in self.codebook_specs],
+            "codebook_specs": self.codebook_specs,
+        }
     
     def get_q_learning_parameters(self):
         return {
@@ -235,8 +252,8 @@ class Parameters :
             "delta_decay": self.delta_decay,
             "delta_min": self.delta_min,
 
-            "saving_freq": self.saving_freq_QL,
-            "test_freq": self.test_freq_QL,
+            "saving_freq": self.saving_freq,
+            "test_freq": self.test_freq,
 
             "precision": self.precision,
             "min_representatives_q_learning_train": self.min_representatives_q_learning_train,
@@ -275,9 +292,9 @@ class Parameters :
             "targetNet_update_method": self.targetNet_update_method,
 
             "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
-            "saving_freq": self.saving_freq_DQN,
-            "test_freq_DQN": self.test_freq_DQN,
-            
+            "saving_freq": self.saving_freq,
+            "test_freq": self.test_freq,
+
             "SNR" : self.SNR,
             "snr_values": self.snr_values,
             "size_codebooks" :self.size_codebooks
@@ -292,6 +309,12 @@ class Parameters :
         """
 
         with open(filename, 'w') as file:
+
+            file.write("=== COMMON PARAMETERS ===\n")
+            common_params = self.get_common_parameters()
+            for key, value in common_params.items():
+                file.write(f"{key}: {value}\n")
+            file.write("\n")
 
             if params_type in ('dqn', 'both'):
                 file.write("=== DQN PARAMETERS ===\n")

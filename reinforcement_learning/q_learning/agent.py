@@ -33,6 +33,8 @@ class QLearningAgent():
         ## ---- Hyperparameters ----
         self.delta_final = environment.get_delta_final() ## Final degree of precision we want to reach, should correspond to the one in states
         params_dict = parameters.get_q_learning_parameters()
+        
+        self.saving_freq = params_dict["saving_freq"]
 
         self.n_episodes = params_dict["n_episodes"]
         self.n_channels_train = params_dict["n_channels_train"]
@@ -202,7 +204,7 @@ class QLearningAgent():
                         f"Unvisited states: {percentage_unvisited_states:.2f}%"
                     )
             
-            if episode % self.parameters.saving_freq_QL == 0:
+            if episode % self.saving_freq == 0:
                 
                 # Save the Q-matrix
                 save_Q_matrix(

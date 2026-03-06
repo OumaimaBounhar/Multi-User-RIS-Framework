@@ -46,8 +46,8 @@ def main():
                                         codebook_specs=codebook_specs,
 
                                         SNR=10,
-                                        snr_values = [0,5,10,20],
-                                        # snr_values = [20],
+                                        # snr_values = [0,5,10,20],
+                                        snr_values = [20],
                                         type_channel="half-spaced ULAs",
                                         type_modulation="BPSK", 
                                         mean_noise=0,
@@ -76,9 +76,6 @@ def main():
                                         batch_size=256,
                                         replay_buffer_memory_size=120000,
 
-                                        max_norm=0.5,
-                                        do_gradient_clipping = True,
-
                                         n_epochs=1000,
                                         # n_epochs = 2,
                                         n_time_steps_dqn=64,
@@ -92,20 +89,19 @@ def main():
                                         # n_channels_train_QL=1,
                                         max_len_path=20,
                                         len_path=20,
+
+                                        max_norm=0.5,
+                                        do_gradient_clipping = True,
                                         
                                         tau = 0.001,
                                         freq_update_target=100,
                                         targetNet_update_method = "soft",
                                         
                                         Train_Deep_Q_Learning=True,
-                                        saving_freq_DQN=100,
-                                        # saving_freq_DQN=1,
-                                        test_freq_DQN=1,
-
                                         Train_Q_Learning=True,
-                                        saving_freq_QL = 100,
-                                        # saving_freq_QL = 1,
-                                        test_freq_QL = 1,
+                                        saving_freq=100,
+                                        # saving_freq=1,
+                                        test_freq=1,
                                         
                                         precision=2,  
                                         len_window_channel=10,

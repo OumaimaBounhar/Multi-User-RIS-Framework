@@ -277,7 +277,7 @@ class Test:
                 # Reseed to ensure reproducible test conditions
                 set_seed(42 + epoch)
 
-                if epoch % self.parameters.test_freq_DQN != 0:
+                if epoch % self.parameters.test_freq != 0:
                     continue
 
                 if self.DQN is None:
@@ -330,7 +330,7 @@ class Test:
 
                 epoch = int(f.split('_')[2].replace('episodes.csv',''))
 
-                if epoch % self.parameters.test_freq_QL == 0:
+                if epoch % self.parameters.test_freq == 0:
 
                     policy_ql = load_Policy(
                         paths= paths,

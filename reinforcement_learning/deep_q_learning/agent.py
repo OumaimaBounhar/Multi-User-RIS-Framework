@@ -34,25 +34,25 @@ class DeepQLearningAgent():
         ## Parameters
         params_dict = self.simu_parameters.get_dqn_parameters()
         
-        self.n_epochs = params_dict["n_epochs"]
         self.saving_freq = params_dict["saving_freq"]
         
-        self.batch_size = params_dict["batch_size"]
-        
+        self.n_epochs = params_dict["n_epochs"]
         self.n_channels_train = params_dict["n_channels_train"]
         self.n_time_steps = params_dict["n_time_steps"]
         self.max_len_path = params_dict["max_len_path"]
         
-        self.freq_update_target = params_dict["freq_update_target"]
-        self.tau = params_dict["tau"]
-        self.targetNet_update_method = params_dict["targetNet_update_method"]
+        self.batch_size = params_dict["batch_size"]
+        replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
 
         self.gamma = params_dict["gamma"]
         self.max_norm = params_dict["max_norm"]
         self.do_gradient_clipping = params_dict["do_gradient_clipping"]
 
+        self.freq_update_target = params_dict["freq_update_target"]
+        self.tau = params_dict["tau"]
+        self.targetNet_update_method = params_dict["targetNet_update_method"]
+
         learning_rate = params_dict["learning_rate_init"]
-        replay_buffer_memory_size = params_dict["replay_buffer_memory_size"]
         epsilon_init = params_dict["epsilon_init"]
         epsilon_decay = params_dict["epsilon_decay"]
         epsilon_min = params_dict["epsilon_min"]
