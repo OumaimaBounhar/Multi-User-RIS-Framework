@@ -39,7 +39,7 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "In this experiment, no RSE noise was used in the methods. We map 8 to 256 to 256 to 14. Raised gamma value to 0.98.",
+                experiment_note = "In this experiment, RSE noise is used again in the methods.",
 
                 N_R=64, 
                 N_T=1, 
@@ -79,13 +79,13 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=500,
+                n_epochs=10000,
                 # n_epochs = 2,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=500,
+                n_episodes=10000,
                 # n_episodes=2,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
@@ -102,7 +102,7 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=50,
+                saving_freq=200,
                 # saving_freq=1,
                 test_freq=1,
                 

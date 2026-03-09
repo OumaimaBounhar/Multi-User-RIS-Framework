@@ -219,9 +219,9 @@ class Methods:
         index_codeword_tested = best_action
         
         self.feedback.transmit(index_codeword_tested,codebook_used=1)
-        # RSE = self.feedback.get_feedback(noise = True)
-        # We test if the noise is the source of unstability in testing
-        RSE = self.feedback.get_feedback(noise = False)
+        RSE = self.feedback.get_feedback(noise = True)
+        # # We test if the noise is the source of unstability in testing
+        # RSE = self.feedback.get_feedback(noise = False)
         Samples.append((RSE,index_codeword_tested))
         self.list_q = Samples
         
@@ -263,9 +263,9 @@ class Methods:
         index_codeword_tested = best_action
 
         self.feedback.transmit(index_codeword_tested,codebook_used=1)
-        # RSE = self.feedback.get_feedback(noise = True)
-        # We test if the noise is the source of unstability in testing
-        RSE = self.feedback.get_feedback(noise = False)
+        RSE = self.feedback.get_feedback(noise = True)
+        # # We test if the noise is the source of unstability in testing
+        # RSE = self.feedback.get_feedback(noise = False)
         Samples.append((RSE,index_codeword_tested))
         self.list_deep_q = Samples
 

@@ -232,17 +232,19 @@ class DeepQLearningAgent():
                         
                         # Start the training process
                         loss_value = dqn_learn_update_step(
-                                                            self.evaluation_q_network,
-                                                            self.target_q_network,
-                                                            self.optimizer, 
-                                                            current_state_batch, 
-                                                            action_batch, 
-                                                            reward_batch, 
-                                                            next_state_batch,
-                                                            terminated_batch,
-                                                            self.gamma, 
-                                                            self.do_gradient_clipping, 
-                                                            self.max_norm )
+                            self.evaluation_q_network,
+                            self.target_q_network,
+                            self.optimizer, 
+                            current_state_batch, 
+                            action_batch, 
+                            reward_batch, 
+                            next_state_batch,
+                            terminated_batch,
+                            self.gamma, 
+                            self.do_gradient_clipping, 
+                            self.max_norm
+                        )
+                        
                         epoch_losses.append(loss_value)
 
                         self.update_step += 1
