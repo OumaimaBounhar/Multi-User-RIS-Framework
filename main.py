@@ -11,17 +11,17 @@ def main():
     set_seed(42)
 
     all_size_of_codebooks = [
-                                [8, 14],
-                                # [16, 30],
+                                # [8, 14],
+                                [16, 30],
                                 # [32, 62],
                                 # [64, 126]
                             ]
 
     all_codebook_specs = [
-                            [CodebookSpec(kind="narrow", N=8),
-                            CodebookSpec(kind="hierarchical", K=3, M=2)],
-                            # [CodebookSpec(kind="narrow", N=16),
-                            #  CodebookSpec(kind="hierarchical", K=4, M=2)],
+                            # [CodebookSpec(kind="narrow", N=8),
+                            # CodebookSpec(kind="hierarchical", K=3, M=2)],
+                            [CodebookSpec(kind="narrow", N=16),
+                            CodebookSpec(kind="hierarchical", K=4, M=2)],
                         ]
 
     delta_values = [
@@ -39,7 +39,7 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "In this experiment, RSE noise is used again in the methods.",
+                experiment_note = "In this experiment, RSE noise is used again in the methods. Codebook [16,30] used.",
 
                 N_R=64, 
                 N_T=1, 
@@ -79,13 +79,13 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=1000,
+                n_epochs=2000,
                 # n_epochs = 1,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=1000,
+                n_episodes=2000,
                 # n_episodes=1,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
@@ -102,7 +102,7 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=100,
+                saving_freq=200,
                 # saving_freq=1,
                 test_freq=1,
                 
