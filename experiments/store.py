@@ -183,6 +183,13 @@ class ExperimentPaths:
         )
     
     @property
+    def dqn_reward_plot(self) -> str:
+        return os.path.join(
+            self.dqn_plots_dir,
+            "convergence_deep_q_learning_reward.png"
+        )
+    
+    @property
     def dqn_grad_norm_plot(self) -> str:
         return os.path.join(
             self.dqn_plots_dir,

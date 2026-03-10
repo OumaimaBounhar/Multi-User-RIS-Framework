@@ -51,6 +51,7 @@ def plot_Convergence(
         paths: ExperimentPaths, 
         avg_losses, 
         avg_len_path,
+        avg_rewards,
         avg_grad_norms=None,
         max_grad_norms=None
 ):
@@ -70,6 +71,15 @@ def plot_Convergence(
     plt.xlabel("Epoch")
     plt.ylabel("Average len path")
     plt.savefig(paths.dqn_path_plot)
+    plt.close()
+
+    # Plot Reward
+    plt.figure()
+    plt.plot(avg_rewards, 'b', label='reward')
+    plt.title("Convergence of DQN Algorithm reward")
+    plt.xlabel("Epoch")
+    plt.ylabel("Average cumulative reward")
+    plt.savefig(paths.dqn_reward_plot)
     plt.close()
 
     # Plot average grad norm before clipping
@@ -102,6 +112,7 @@ def save_Data(
         paths: ExperimentPaths, 
         avg_losses, 
         avg_len_path, 
+        avg_rewards,
         epsilons,
         avg_grad_norms=None,
         max_grad_norms=None
@@ -123,6 +134,15 @@ def save_Data(
         avg_len_path, 
         delimiter=",", 
         header="Average Len Path", 
+        comments=""
+    )
+
+    # Save average rewards in a CSV file
+    np.savetxt(
+        paths.dqn_metrics_csv("avgRewards"),
+        avg_rewards,
+        delimiter=",",
+        header="Average Reward",
         comments=""
     )
 
@@ -155,6 +175,7 @@ def save_Data(
         
     print(f"[INFO] Losses saved to {paths.dqn_metrics_csv('losses')}")
     print(f"[INFO] Average path lengths saved to {paths.dqn_metrics_csv('avgLenPath')}")
+    print(f"[INFO] Average rewards saved to {paths.dqn_metrics_csv('avgRewards')}")
     print(f"[INFO] Epsilon values saved to {paths.dqn_metrics_csv('epsilons')}")
 
     if avg_grad_norms is not None:

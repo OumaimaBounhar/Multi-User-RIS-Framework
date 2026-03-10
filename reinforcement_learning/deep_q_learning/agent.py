@@ -155,6 +155,7 @@ class DeepQLearningAgent():
         
         epoch_losses = []
         epoch_path_lengths = []
+        epoch_rewards = []
         epoch_grad_norms = []
 
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
@@ -179,7 +180,8 @@ class DeepQLearningAgent():
                 for _ in range(self.n_time_steps):
                     
                     ## Track path length as number of actions are taken to measure how efficient the policy is
-                    path_len = 0 
+                    path_len = 0
+                    episode_reward = 0.0
                 
                     #---------------------------------------- Loop until reaching the maximum length of path allowed --------------------------------------------------
 
@@ -202,8 +204,9 @@ class DeepQLearningAgent():
                             model_type = 'DQN'
                             )
                         
-                        # Save the reward
+                        # Update the path length and reward trackers for this episode
                         path_len += 1
+                        episode_reward += reward
 
                         # Setting the Gymnasium-style step.
                         time_limit_reached = (path == self.max_len_path - 1)
@@ -225,6 +228,7 @@ class DeepQLearningAgent():
                             break
 
                     epoch_path_lengths.append(path_len)
+                    epoch_rewards.append(episode_reward)
                     
                     #------------------- Learning step (only if the buffer has enough samples) ------------------
                     if self.replay_buffer.memory_counter >= self.batch_size:
@@ -272,6 +276,7 @@ class DeepQLearningAgent():
         return {
             "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
             "avg_len_path" : np.mean(epoch_path_lengths),
+            "avg_reward": np.mean(epoch_rewards),
             "avg_grad_norm_before_clip": np.mean(epoch_grad_norms) if len(epoch_grad_norms) > 0 else np.nan,
             "max_grad_norm_before_clip": np.max(epoch_grad_norms) if len(epoch_grad_norms) > 0 else np.nan,
             "n_updates": self.update_step
@@ -293,9 +298,12 @@ class DeepQLearningAgent():
 
         print(f"Initialize Training for DQN Network on Device : {self.device}")
         
+        epsilons = []
+
         avg_losses = []
         avg_len_path = []
-        epsilons = []
+        avg_rewards = []
+
         avg_grad_norms = []
         max_grad_norms = []
 
@@ -307,9 +315,12 @@ class DeepQLearningAgent():
                 epsilon= epsilon
             )
             
+            epsilons.append(epsilon)
+
             avg_losses.append(one_epoch_metrics["avg_loss"])
             avg_len_path.append(one_epoch_metrics["avg_len_path"])
-            epsilons.append(epsilon)
+            avg_rewards.append(one_epoch_metrics["avg_reward"])
+
             avg_grad_norms.append(one_epoch_metrics["avg_grad_norm_before_clip"])
             max_grad_norms.append(one_epoch_metrics["max_grad_norm_before_clip"])
 
@@ -361,6 +372,7 @@ class DeepQLearningAgent():
             self.paths,
             avg_losses,
             avg_len_path,
+            avg_rewards,
             epsilons,
             avg_grad_norms,
             max_grad_norms
@@ -371,6 +383,7 @@ class DeepQLearningAgent():
             self.paths,
             avg_losses,
             avg_len_path,
+            avg_rewards,
             avg_grad_norms,
             max_grad_norms
         )
