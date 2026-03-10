@@ -105,6 +105,9 @@ def main():
                 saving_freq=200,
                 # saving_freq=1,
                 test_freq=1,
+
+                continue_training = True,
+                recover_checkpoint_path = "./Data/Example_25",
                 
                 precision=2,  
                 len_window_channel=10,
@@ -115,7 +118,12 @@ def main():
 
             print(f"\nExperiment note: {parameters.experiment_note}\n")
 
-            paths = ExperimentPaths.make_new_experiment_folder(base_dir = "./Data")
+            if parameters.continue_training:
+                if parameters.recover_checkpoint_path is None:
+                    raise ValueError("continue_training = True but recover_checkpoint_path is None")
+                paths = ExperimentPaths(root=parameters.recover_checkpoint_path)
+            else:
+                paths = ExperimentPaths.make_new_experiment_folder(base_dir="./Data")
 
             store = Store(paths)
 

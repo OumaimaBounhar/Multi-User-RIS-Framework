@@ -76,6 +76,9 @@ class Parameters :
                     saving_freq: int = 1,
                     test_freq: int = 1,
 
+                    continue_training: bool = False,
+                    recover_checkpoint_path: Optional[str] = None,
+
                     precision: int = 2,  
                     len_window_channel:int = 10,
                     modification_channel=0,
@@ -127,6 +130,9 @@ class Parameters :
         
         self.saving_freq = saving_freq
         self.test_freq = test_freq
+
+        self.continue_training = continue_training
+        self.recover_checkpoint_path = recover_checkpoint_path
 
         ### For Q-Learning parameters ###
         self.n_episodes = n_episodes
@@ -300,6 +306,9 @@ class Parameters :
             "Train_Deep_Q_Learning": self.Train_Deep_Q_Learning,
             "saving_freq": self.saving_freq,
             "test_freq": self.test_freq,
+            
+            "continue_training": self.continue_training,
+            "recover_checkpoint_path": self.recover_checkpoint_path,
 
             "SNR" : self.SNR,
             "snr_values": self.snr_values,

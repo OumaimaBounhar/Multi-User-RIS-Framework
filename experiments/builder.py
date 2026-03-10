@@ -48,10 +48,16 @@ class ExperimentBuilder:
             signal
             ) 
 
+        dataset_mode = (
+            DatasetMode.REUSE
+            if self.parameters.continue_training
+            else DatasetMode.GENERATE
+        )
+
         # Generate dataset
         dataset_factory = DatasetFactory()
         dataset_proba = dataset_factory.get_dataset(
-            dataset_mode = DatasetMode.GENERATE, 
+            dataset_mode = dataset_mode, 
             store = self.store, 
             parameters = self.parameters, 
             channel = channel, 

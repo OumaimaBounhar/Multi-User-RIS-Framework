@@ -10,8 +10,13 @@ from reinforcement_learning.deep_q_learning.components.replay_buffer import Repl
 from reinforcement_learning.deep_q_learning.components.schedules import multiplicativeDecaySchedule
 
 from reinforcement_learning.deep_q_learning.algo.dqn_update import dqn_learn_update_step, dqn_target_update
-from reinforcement_learning.deep_q_learning.utils import save_dqn_weights, plot_Convergence, save_Data
-
+from reinforcement_learning.deep_q_learning.utils import (
+    save_dqn_weights, 
+    plot_Convergence, 
+    save_Data,
+    save_dqn_training_state,
+    load_dqn_training_state
+)
 
 class DeepQLearningAgent():
     """ Class for Deep Q-Learning Algorithm"""
@@ -62,6 +67,9 @@ class DeepQLearningAgent():
         
         self.saving_freq = params_dict["saving_freq"]
 
+        self.continue_training = params_dict["continue_training"]
+
+        self.start_epoch = 0
         self.update_step = 0 # Count how many gradients have been performed
 
         # ---- Dataset ----
@@ -137,6 +145,40 @@ class DeepQLearningAgent():
                 q_values = self.evaluation_q_network(state_tensor)
                 action = torch.argmax(q_values).item()
         return action
+
+    def load_training_state(self):
+        checkpoint = load_dqn_training_state(self.paths, self.device)
+
+        self.evaluation_q_network.load_state_dict(checkpoint["eval_state_dict"])
+        self.target_q_network.load_state_dict(checkpoint["target_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.update_step = checkpoint["update_step"]
+
+        # Restore schedules
+        self.epsilon_schedule.value = checkpoint["epsilon_schedule"]["value"]
+        self.delta_schedule.value = checkpoint["delta_schedule"]["value"]
+
+        # Restore replay buffer
+        rb = checkpoint["replay_buffer"]
+        self.replay_buffer.current_state_memory = rb["current_state_memory"]
+        self.replay_buffer.next_state_memory = rb["next_state_memory"]
+        self.replay_buffer.action_memory = rb["action_memory"]
+        self.replay_buffer.reward_memory = rb["reward_memory"]
+        self.replay_buffer.terminated_memory = rb["terminated_memory"]
+        self.replay_buffer.memory_counter = rb["memory_counter"]
+        self.replay_buffer.idx = rb["idx"]
+
+        self.start_epoch = checkpoint["epoch"] + 1
+
+        history = checkpoint["history"]
+        return {
+            "avg_losses": history["avg_losses"],
+            "avg_len_path": history["avg_len_path"],
+            "avg_rewards": history["avg_rewards"],
+            "epsilons": history["epsilons"],
+            "avg_grad_norms": history["avg_grad_norms"],
+            "max_grad_norms": history["max_grad_norms"],
+        }
     
     def train_one_epoch(self, epsilon: float):
         """ 
@@ -285,42 +327,58 @@ class DeepQLearningAgent():
     
     def train(self):
         """" 
-        Train the Deep Q-Learning Network 
+        Train the Deep Q-Learning Network, with optional recovery.
         """
-
-        # Reset the values of epsilon and delta
-        self.epsilon_schedule.reset()
-        self.delta_schedule.reset()
-
-        epsilon = self.epsilon_schedule.get()
-        delta = self.delta_schedule.get()
-        print(f"Initialization of epsilon and delta schedules : epsilon_init = {epsilon} delta_init = {delta}")
-
-        print(f"Initialize Training for DQN Network on Device : {self.device}")
         
         epsilons = []
-
         avg_losses = []
         avg_len_path = []
         avg_rewards = []
-
         avg_grad_norms = []
         max_grad_norms = []
 
+        # Reset the values of epsilon and delta
+        if self.continue_training:
+            print("[INFO] Recovering DQN training from saved state...")
+            history = self.load_training_state()
+            
+            epsilons = history["epsilons"]
+            avg_losses = history["avg_losses"]
+            avg_len_path = history["avg_len_path"]
+            avg_rewards = history["avg_rewards"]
+            avg_grad_norms = history["avg_grad_norms"]
+            max_grad_norms = history["max_grad_norms"]
+
+            epsilon = self.epsilon_schedule.get()
+            delta = self.delta_schedule.get()
+            self.environment.set_delta_current(delta)
+
+            print(f"[INFO] Recovery start epoch = {self.start_epoch}")
+            print(f"[INFO] Remaining epochs = {self.n_epochs - self.start_epoch}")
+        else:
+            self.start_epoch = 0
+            self.epsilon_schedule.reset()
+            self.delta_schedule.reset()
+
+            epsilon = self.epsilon_schedule.get()
+            delta = self.delta_schedule.get()
+            self.environment.set_delta_current(delta)
+
+            print(f"Initialization of epsilon and delta schedules : epsilon_init = {epsilon} delta_init = {delta}")
+
+        print(f"Initialize Training for DQN Network on Device : {self.device}")
+        
         #---------------------------------------- Loop over epochs --------------------------------------------------
 
-        for epoch in tqdm(range(self.n_epochs)):
-            
+        for epoch in tqdm(range(self.start_epoch, self.n_epochs)):
             one_epoch_metrics = self.train_one_epoch(
                 epsilon= epsilon
             )
             
             epsilons.append(epsilon)
-
             avg_losses.append(one_epoch_metrics["avg_loss"])
             avg_len_path.append(one_epoch_metrics["avg_len_path"])
             avg_rewards.append(one_epoch_metrics["avg_reward"])
-
             avg_grad_norms.append(one_epoch_metrics["avg_grad_norm_before_clip"])
             max_grad_norms.append(one_epoch_metrics["max_grad_norm_before_clip"])
 
@@ -328,6 +386,7 @@ class DeepQLearningAgent():
                         f"Epoch {epoch}:" 
                         f"Loss = {one_epoch_metrics['avg_loss']:.6f}, "
                         f"Avg Path = {one_epoch_metrics['avg_len_path']:.2f}, "
+                        f"Avg Reward = {one_epoch_metrics['avg_reward']:.2f}, "
                         f"Avg Grad Norm = {one_epoch_metrics['avg_grad_norm_before_clip']:.4f}, "
                         f"Max Grad Norm = {one_epoch_metrics['max_grad_norm_before_clip']:.4f}, "
                         f"Epsilon = {epsilon:.3f}, "
@@ -358,6 +417,24 @@ class DeepQLearningAgent():
                     self.target_q_network
                 )
 
+                save_dqn_training_state(
+                    self.paths,
+                    epoch,
+                    self.evaluation_q_network,
+                    self.target_q_network,
+                    self.optimizer,
+                    self.replay_buffer,
+                    self.epsilon_schedule,
+                    self.delta_schedule,
+                    self.update_step,
+                    avg_losses,
+                    avg_len_path,
+                    avg_rewards,
+                    epsilons,
+                    avg_grad_norms,
+                    max_grad_norms,
+                )
+
         # save the model checkpoints for the last epoch
         save_dqn_weights(
             self.paths, 
@@ -365,6 +442,24 @@ class DeepQLearningAgent():
             self.evaluation_q_network, 
             self.target_q_network,
             final_epoch = self.n_epochs
+        )
+
+        save_dqn_training_state(
+            self.paths,
+            self.n_epochs - 1,
+            self.evaluation_q_network,
+            self.target_q_network,
+            self.optimizer,
+            self.replay_buffer,
+            self.epsilon_schedule,
+            self.delta_schedule,
+            self.update_step,
+            avg_losses,
+            avg_len_path,
+            avg_rewards,
+            epsilons,
+            avg_grad_norms,
+            max_grad_norms,
         )
 
         # Save the records of average losses, length of path and epsilon

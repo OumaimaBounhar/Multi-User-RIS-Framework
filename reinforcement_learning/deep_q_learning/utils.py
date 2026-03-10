@@ -45,6 +45,84 @@ def save_dqn_weights(
 
     print(f"[INFO] Epoch {epoch} weights saved to {paths.dqn_checkpoints_dir}")
 
+def save_dqn_training_state(
+        paths: ExperimentPaths,
+        epoch: int,
+        eval_net,
+        target_net,
+        optimizer,
+        replay_buffer,
+        epsilon_schedule,
+        delta_schedule,
+        update_step: int,
+        avg_losses,
+        avg_len_path,
+        avg_rewards,
+        epsilons,
+        avg_grad_norms,
+        max_grad_norms,
+):
+    """ This function saves DQN weights and necessary elements to continue training.
+    """
+    os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
+
+    payload = {
+        "epoch": epoch,
+        "eval_state_dict": eval_net.state_dict(),
+        "target_state_dict": target_net.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "update_step": update_step,
+
+        "epsilon_schedule": {
+            "init_value": epsilon_schedule.init_value,
+            "value": epsilon_schedule.value,
+            "decay": epsilon_schedule.decay,
+            "min_value": epsilon_schedule.min_value,
+        },
+        "delta_schedule": {
+            "init_value": delta_schedule.init_value,
+            "value": delta_schedule.value,
+            "decay": delta_schedule.decay,
+            "min_value": delta_schedule.min_value,
+        },
+
+        "replay_buffer": {
+            "current_state_memory": replay_buffer.current_state_memory,
+            "next_state_memory": replay_buffer.next_state_memory,
+            "action_memory": replay_buffer.action_memory,
+            "reward_memory": replay_buffer.reward_memory,
+            "terminated_memory": replay_buffer.terminated_memory,
+            "memory_counter": replay_buffer.memory_counter,
+            "idx": replay_buffer.idx,
+        },
+
+        "history": {
+            "avg_losses": avg_losses,
+            "avg_len_path": avg_len_path,
+            "avg_rewards": avg_rewards,
+            "epsilons": epsilons,
+            "avg_grad_norms": avg_grad_norms,
+            "max_grad_norms": max_grad_norms,
+        }
+    }
+
+    torch.save(payload, paths.dqn_training_state_file)
+    print(f"[INFO] Full DQN training state saved to {paths.dqn_training_state_file}")
+
+def load_dqn_training_state(paths: ExperimentPaths, device):
+    """Load DQN savings to continue training. 
+    """
+    checkpoint_path = paths.dqn_training_state_file
+
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(
+            f"No DQN recovery checkpoint found at {checkpoint_path}"
+        )
+
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    print(f"[INFO] Loaded DQN training state from {checkpoint_path}")
+    return checkpoint
+
 #---------------------------------------- Visualization  ------------------------------------------------------------------------------
 
 def plot_Convergence(

@@ -212,6 +212,10 @@ class ExperimentPaths:
             self.dqn_metrics_dir, 
             f"{name}.csv"
         )
+
+    @property
+    def dqn_training_state_file(self) -> str:
+        return os.path.join(self.dqn_checkpoints_dir, "training_state.pth")
     
     @property
     def complexity_report_file(self) -> str:

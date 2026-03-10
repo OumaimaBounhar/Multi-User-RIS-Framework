@@ -33,6 +33,13 @@ class Runner:
         if not self.parameters.Train_Q_Learning:
             print("[Info] Skipping Q-Learning training.")
             return None
+
+        if self.parameters.continue_training:
+            print("[INFO] Reusing saved Q-Learning policy...")
+            return load_Policy(
+                paths=self.store.paths,
+                episode=self.parameters.n_episodes
+            )
         
         print("[INFO] Starting Q-Learning Training...")
         q_matrices_path = self.store.paths.q_matrices_dir
