@@ -59,7 +59,7 @@ class Test:
         T = 10     # Time steps for the evolution of the channel
         
         objs = testing_objects_dict
-        filename = objs["filename"]
+        paths = objs["paths"]
 
         # Methods to compare
         # Define labels based on the selected mode
@@ -80,7 +80,7 @@ class Test:
             
             print(f'SNR value = {self.parameters.SNR}')
             print(f'Std noise = {self.parameters.std_noise}')
-            print(f'Noise parameters = {self.parameters.get_noise_parameters}')
+            print(f'Noise parameters = {self.parameters.get_noise_parameters()}')
 
             # Initialize Methods with the specific policy/network for this epoch
             methods = Methods(
@@ -164,7 +164,7 @@ class Test:
             
             # Process and Save Statistics
             self._save_and_plot(
-                filename, 
+                paths, 
                 epoch, 
                 SNR, 
                 label, 
@@ -179,7 +179,7 @@ class Test:
 
     def _save_and_plot(
         self, 
-        filename, 
+        paths, 
         epoch, 
         SNR, 
         label, 
@@ -195,12 +195,26 @@ class Test:
         """
         
         # Save .dat files
-        pd.DataFrame({"Epoch": epoch, "AvgLenPath": avg_len_path}, index=[0]).to_csv(
-            os.path.join(filename, f"data_epoch_{epoch}_snr_{SNR}.dat"), index=False)
-        pd.DataFrame(correct_class, columns=label).to_csv(
-            os.path.join(filename, f"probability_epoch_{epoch}_snr_{SNR}.dat"), index=False)
-        pd.DataFrame(relative_strength, columns=label).to_csv(
-            os.path.join(filename, f"strength_epoch_{epoch}_snr_{SNR}.dat"), index=False)
+        pd.DataFrame(
+            {"Epoch": epoch, "AvgLenPath": avg_len_path}, 
+            index=[0]).to_csv(
+            paths.test_summary_file(epoch, SNR), 
+            index=False
+        )
+
+        pd.DataFrame(
+            correct_class, 
+            columns=label).to_csv(
+            paths.test_probability_file(epoch, SNR), 
+            index=False
+        )
+
+        pd.DataFrame(
+            relative_strength, 
+            columns=label).to_csv(
+            paths.test_strength_file(epoch, SNR), 
+            index=False
+        )
 
         # 1. Probability Plot
         plt.figure(figsize=(10, 6))
@@ -208,7 +222,7 @@ class Test:
         plt.legend()
         plt.title(f'Probability of Finding the Best Codeword for Different Number of Pilots Sent at SNR = {SNR}')
         plt.grid()
-        plt.savefig(f"{filename}/Image_snr_{SNR}_epoch_{epoch}.png")
+        plt.savefig(paths.test_probability_plot(epoch, SNR))
         plt.close()
         
         # 2. Strength Plot
@@ -217,7 +231,7 @@ class Test:
         plt.legend()
         plt.title(f'Strength for Different Number of Pilots Sent (SNR = {SNR})')
         plt.grid()
-        plt.savefig(f"{filename}/Image_strength_epoch_{epoch}_snr_{SNR}.png")
+        plt.savefig(paths.test_strength_plot(epoch, SNR))
         plt.close()
 
         # 3. Successful Episodes Plot
@@ -227,7 +241,7 @@ class Test:
         plt.ylabel('Number of Successful Episodes')
         plt.title(f'Number of Successful Episodes by Epoch at SNR = {SNR}')
         plt.grid(True)
-        plt.savefig(f"{filename}/successful_episodes_by_epoch_at_snr_{SNR}.png")
+        plt.savefig(paths.test_success_plot(SNR))
         plt.close()
 
         print(f"[INFO] SNR {SNR}: Success Rate {(total_successful_episodes/n_ex)*100}% | Avg Path {avg_len_path}")
@@ -249,15 +263,8 @@ class Test:
         @mode: 'dqn' (tests baselines + DQN), 'ql' (tests baselines + QL), or 'both' (tests all).   
         """
         # Save params back in Parameters class
-        self.parameters.save_to_file(
-            os.path.join(
-                testing_objects_dict["filename"], 
-                f"params_{mode}.txt"
-            ),
-            mode
-        )
-
-        paths = ExperimentPaths(root=testing_objects_dict["filename"])
+        paths = testing_objects_dict["paths"]
+        self.parameters.save_to_file(paths.params_file(mode), mode)
 
         # Logic to find checkpoints based on mode
         if mode in ('both', 'dqn'):

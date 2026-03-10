@@ -37,25 +37,77 @@ class ExperimentPaths:
             )
         )
     
+    # --------------------------- General folders ---------------------------
     @property # allows to use a method like an attribute
+    def config_dir(self) -> str:
+        return os.path.join(self.root, "config")
+
+    @property
+    def dataset_dir(self) -> str:
+        return os.path.join(self.root, "dataset")
+
+    @property
+    def noise_dir(self) -> str:
+        return os.path.join(self.root, "noise")
+
+    @property
+    def q_learning_dir(self) -> str:
+        return os.path.join(self.root, "q_learning")
+
+    @property
+    def dqn_dir(self) -> str:
+        return os.path.join(self.root, "deep_q_learning")
+
+    @property
+    def tests_dir(self) -> str:
+        return os.path.join(self.root, "tests")
+
+    # --------------------------- Test subfolders ---------------------------
+    @property
+    def test_probabilities_dir(self) -> str:
+        return os.path.join(self.tests_dir, "probabilities")
+
+    @property
+    def test_strengths_dir(self) -> str:
+        return os.path.join(self.tests_dir, "strengths")
+
+    @property
+    def test_summaries_dir(self) -> str:
+        return os.path.join(self.tests_dir, "summaries")
+
+    @property
+    def test_plots_dir(self) -> str:
+        return os.path.join(self.tests_dir, "plots")
+
+    @property
+    def test_probability_plots_dir(self) -> str:
+        return os.path.join(self.test_plots_dir, "probability")
+
+    @property
+    def test_strength_plots_dir(self) -> str:
+        return os.path.join(self.test_plots_dir, "strength")
+
+    @property
+    def test_success_plots_dir(self) -> str:
+        return os.path.join(self.test_plots_dir, "success")
+
+    # --------------------------- General files ---------------------------
+    def params_file(self, mode: str) -> str:
+        return os.path.join(self.config_dir, f"params_{mode}.txt")
+
+    @property
     def dataset_pickle(self) -> str:
-        return os.path.join(
-            self.root, 
-            "Dataset.pickle"
-        )
+        return os.path.join(self.dataset_dir, "Dataset.pickle")
 
     @property
     def noise_csv(self) -> str:
-        return os.path.join(
-            self.root, 
-            "Noise_parameters.csv"
-        )
-
-    # ---------------------------------------- Q-Learning  ------------------------------------------------------------------------------
+        return os.path.join(self.noise_dir, "Noise_parameters.csv")
+    
+    # --------------------------- Q-Learning  ---------------------------
     @property
     def q_matrices_dir(self) -> str:
         return os.path.join(
-            self.root, 
+            self.q_learning_dir, 
             "Q_matrices"
         )
 
@@ -108,12 +160,12 @@ class ExperimentPaths:
             "Data_len_path_training.dat"
         )
 
-    # ---------------------------------------- Deep Q-Learning  ------------------------------------------------------------------------------
+    # --------------------------- Deep Q-Learning  ---------------------------
     @property
     def dqn_checkpoints_dir(self) -> str:
         """Directory to save DQN checkpoints."""
         return os.path.join(
-            self.root, 
+            self.dqn_dir, 
             "checkpoints"
         )
 
@@ -182,6 +234,60 @@ class ExperimentPaths:
             self.dqn_checkpoints_dir, 
             "complexity_report.txt"
         )
+
+    # --------------------------- Test files ---------------------------
+    def test_summary_file(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_summaries_dir,
+            f"data_epoch_{epoch}_snr_{snr}.dat"
+        )
+
+    def test_probability_file(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_probabilities_dir,
+            f"probability_epoch_{epoch}_snr_{snr}.dat"
+        )
+
+    def test_strength_file(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strengths_dir,
+            f"strength_epoch_{epoch}_snr_{snr}.dat"
+        )
+
+    def test_probability_plot(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_probability_plots_dir,
+            f"Image_snr_{snr}_epoch_{epoch}.png"
+        )
+
+    def test_strength_plot(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strength_plots_dir,
+            f"Image_strength_epoch_{epoch}_snr_{snr}.png"
+        )
+
+    def test_success_plot(self, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_success_plots_dir,
+            f"successful_episodes_by_epoch_at_snr_{snr}.png"
+        )
+
+    # --------------------------- Noise files ---------------------------
+    def noise_csv_per_snr(self, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.noise_dir,
+            f"Noise_parameters_snr_{snr}.csv"
+        )
+
+    @property
+    def noise_csv_all(self) -> str:
+        return os.path.join(self.noise_dir, "Noise_parameters_all.csv")
+
+    def noise_histogram_plot(self, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.noise_dir,
+            f"Noise_histogram_snr_{snr}.png"
+        )
     
 class Store:
     """
@@ -192,7 +298,28 @@ class Store:
             paths: "ExperimentPaths"
     ):
         self.paths = paths
-        os.makedirs(self.paths.root, exist_ok= True)
+
+        dirs_to_create = [
+            self.paths.root,
+            self.paths.config_dir,
+            self.paths.dataset_dir,
+            self.paths.noise_dir,
+            self.paths.q_learning_dir,
+            self.paths.q_matrices_dir,
+            self.paths.dqn_dir,
+            self.paths.dqn_checkpoints_dir,
+            self.paths.tests_dir,
+            self.paths.test_probabilities_dir,
+            self.paths.test_strengths_dir,
+            self.paths.test_summaries_dir,
+            self.paths.test_plots_dir,
+            self.paths.test_probability_plots_dir,
+            self.paths.test_strength_plots_dir,
+            self.paths.test_success_plots_dir,
+        ]
+
+        for d in dirs_to_create:
+            os.makedirs(d, exist_ok=True)
 
     # ---- Dataset ----
     def dataset_exists(self) -> bool:

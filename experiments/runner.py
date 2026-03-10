@@ -82,7 +82,7 @@ class Runner:
                 "feedback": self.feedback,
                 "probability": self.probability,
                 "states": self.env.state_space,
-                "filename": self.filename,
+                "paths": self.store.paths,
                 "len_window_channel": self.parameters.len_window_channel,
                 "Policy_Q": q_policy,
                 "modification_channel": self.parameters.modification_channel,
@@ -106,10 +106,10 @@ class Runner:
             Policy_network = dqn_policy_net
         )
 
-        # 2. Rebuild the final testing dictionary with available policies
+        # Rebuild the final testing dictionary with available policies
         testing_objects_dict = self._build_testing_objects_dict(q_policy=q_policy)
         
-        # 3. Initialize the Test class
+        # Initialize the Test class
         tester = Test(
             parameters = self.parameters,
             methods = methods,
@@ -118,10 +118,20 @@ class Runner:
             DQN = dqn_agent
         )
 
-        # 4. Execute the multi-SNR testing suite
+        # Choosing the mode dynamically based on available policies
+        if q_policy is not None and dqn_agent is not None and dqn_policy_net is not None:
+            mode = "both"
+        elif dqn_agent is not None and dqn_policy_net is not None:
+            mode = "dqn"
+        elif q_policy is not None:
+            mode = "ql"
+        else:
+            raise ValueError("No trained policy available for testing.")
+
+        # Execute the multi-SNR testing suite
         tester.run_model_tests(
             testing_objects_dict=testing_objects_dict,
             checkpoints_dir_ql=self.store.paths.q_matrices_dir,
             checkpoints_dir_dql=self.store.paths.dqn_checkpoints_dir,
-            mode='both'
+            mode=mode
         )

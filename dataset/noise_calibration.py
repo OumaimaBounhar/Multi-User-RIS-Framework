@@ -7,8 +7,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from experiments.store import ExperimentPaths
+
 #---------------------------------------- Experiment helpers ------------------------------------------------------------------------------
-def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
+def fit_noise(paths: ExperimentPaths, feedback, channel, parameters, max_samples=1000):
     print("Fitting real noise to Gaussian noise")
 
     size_codebooks, _ = parameters.get_codebook_parameters()
@@ -34,36 +36,53 @@ def fit_noise(filename: str, feedback, channel, parameters, max_samples=1000):
 
                 noise_value = RSE - RSE_no_noise
                 data.append(noise_value)
-                noise_contribution.append(np.log(RSE_no_noise / noise_value if noise_value != 0 else 0))
 
+                if noise_value > 0 and RSE_no_noise > 0:
+                    ratio = RSE_no_noise / noise_value
+                    if ratio > 0:
+                        noise_contribution.append(np.log(ratio))
+                        
         # Fit noise to a Gaussian distribution
         mu, sigma = scipy.stats.norm.fit(data)
         noise_results.append([snr, mu, sigma])
 
         # Save parameters for this SNR
         res_df = pd.DataFrame([[snr, mu, sigma]], columns=["SNR (dB)", "Mean", "Std"])
-        res_df.to_csv(f"{filename}/Noise_parameters_snr_{snr}.csv", index=False)
+        res_df.to_csv(paths.noise_csv_per_snr(snr), index=False)
 
         # Plot histogram of noise contribution
         plt.figure(figsize=(10, 6))
-        plt.hist(noise_contribution, bins=50, density=True, alpha=0.6, color='b', edgecolor='black', label='Noise Contribution')
+
+        if len(noise_contribution) > 0:
+            plt.hist(
+                noise_contribution,
+                bins=50,
+                density=True,
+                alpha=0.6,
+                color='b',
+                edgecolor='black',
+                label='Noise Contribution'
+            )
+            plt.legend()
+        else:
+            plt.text(0.5, 0.5, "No valid log samples", ha='center', va='center')
+            
         plt.title(f'Histogram of Noise Contribution (SNR={snr} dB)')
         plt.xlabel('Noise Contribution')
         plt.ylabel('Density')
-        plt.legend()
         plt.grid(True)
-
+        
         # Save histogram for this SNR
-        plt.savefig(f"{filename}/Noise_histogram_snr_{snr}.png")
+        plt.savefig(paths.noise_histogram_plot(snr))
         plt.close()
 
     # Save all noise fitting results in one file
     noise_results_df = pd.DataFrame(noise_results, columns=["SNR (dB)", "Mean", "Std"])
-    noise_results_df.to_csv(f"{filename}/Noise_parameters_all.csv", index=False)
+    noise_results_df.to_csv(paths.noise_csv_all, index=False)
     
     # Canonical file expected by Store/noise loading.
     noise_results_df.loc[:, ["Mean", "Std"]].iloc[[0]].to_csv(
-        f"{filename}/Noise_parameters.csv", index=False
+        paths.noise_csv, index=False
     )
 
     first_row = noise_results_df.iloc[0]

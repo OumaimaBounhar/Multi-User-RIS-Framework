@@ -60,7 +60,7 @@ class NoiseFactory:
             return (0.0, 0.01)
         
         elif noise_mode == NoiseMode.FIT:
-            mean, std = fit_noise(store.paths.root, feedback, channel, parameters) 
+            mean, std = fit_noise(store.paths, feedback, channel, parameters) 
             return (float(mean), float(std))
         
         elif noise_mode == NoiseMode.REUSE:
