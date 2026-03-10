@@ -50,7 +50,9 @@ def save_dqn_weights(
 def plot_Convergence(
         paths: ExperimentPaths, 
         avg_losses, 
-        avg_len_path
+        avg_len_path,
+        avg_grad_norms=None,
+        max_grad_norms=None
 ):
     # Plot Loss
     plt.figure()
@@ -70,13 +72,39 @@ def plot_Convergence(
     plt.savefig(paths.dqn_path_plot)
     plt.close()
 
+    # Plot average grad norm before clipping
+    if avg_grad_norms is not None:
+        plt.figure()
+        plt.plot(avg_grad_norms, 'b', label='avg grad norm before clipping')
+        plt.axhline(y=1.0, color='r', linestyle='--', label='reference = 1')
+        plt.title("Average Gradient Norm Before Clipping")
+        plt.xlabel("Epoch")
+        plt.ylabel("Gradient norm")
+        plt.legend()
+        plt.savefig(paths.dqn_grad_norm_plot)
+        plt.close()
+
+    # Plot max grad norm before clipping
+    if max_grad_norms is not None:
+        plt.figure()
+        plt.plot(max_grad_norms, 'b', label='max grad norm before clipping')
+        plt.axhline(y=1.0, color='r', linestyle='--', label='reference = 1')
+        plt.title("Max Gradient Norm Before Clipping")
+        plt.xlabel("Epoch")
+        plt.ylabel("Gradient norm")
+        plt.legend()
+        plt.savefig(paths.dqn_grad_norm_max_plot)
+        plt.close()
+
 #---------------------------------------- Reporting ------------------------------------------------------------------------------
 
 def save_Data(
         paths: ExperimentPaths, 
         avg_losses, 
         avg_len_path, 
-        epsilons
+        epsilons,
+        avg_grad_norms=None,
+        max_grad_norms=None
 ):
     os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
     
@@ -107,9 +135,33 @@ def save_Data(
         comments=""
     )
 
+    if avg_grad_norms is not None:
+        np.savetxt(
+            paths.dqn_metrics_csv("avgGradNormBeforeClip"),
+            avg_grad_norms,
+            delimiter=",",
+            header="Average Gradient Norm Before Clipping",
+            comments=""
+        )
+
+    if max_grad_norms is not None:
+        np.savetxt(
+            paths.dqn_metrics_csv("maxGradNormBeforeClip"),
+            max_grad_norms,
+            delimiter=",",
+            header="Max Gradient Norm Before Clipping",
+            comments=""
+        )
+        
     print(f"[INFO] Losses saved to {paths.dqn_metrics_csv('losses')}")
     print(f"[INFO] Average path lengths saved to {paths.dqn_metrics_csv('avgLenPath')}")
     print(f"[INFO] Epsilon values saved to {paths.dqn_metrics_csv('epsilons')}")
+
+    if avg_grad_norms is not None:
+        print(f"[INFO] Avg grad norms saved to {paths.dqn_metrics_csv('avgGradNormBeforeClip')}")
+    if max_grad_norms is not None:
+        print(f"[INFO] Max grad norms saved to {paths.dqn_metrics_csv('maxGradNormBeforeClip')}")
+        
     print(f"[INFO] DQN Metrics saved in {paths.dqn_checkpoints_dir}")
             
 def save_model_complexity(

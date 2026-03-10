@@ -87,7 +87,7 @@ class DeepQLearningAgent():
 
         # the target network is initialized with the same weights as the evaluation network
         self.target_q_network.load_state_dict(self.evaluation_q_network.state_dict())
-
+        
         # ---- Optimizer ----
         # The network is less pure with the optimizer, it needs to be in the agent.
         self.optimizer = torch.optim.Adam(
@@ -155,6 +155,7 @@ class DeepQLearningAgent():
         
         epoch_losses = []
         epoch_path_lengths = []
+        epoch_grad_norms = []
 
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
 
@@ -231,7 +232,7 @@ class DeepQLearningAgent():
                         current_state_batch, action_batch, reward_batch, next_state_batch, terminated_batch = self.replay_buffer.sample_buffer()
                         
                         # Start the training process
-                        loss_value = dqn_learn_update_step(
+                        loss_value, grad_norm_before_clip  = dqn_learn_update_step(
                             self.evaluation_q_network,
                             self.target_q_network,
                             self.optimizer, 
@@ -246,6 +247,7 @@ class DeepQLearningAgent():
                         )
                         
                         epoch_losses.append(loss_value)
+                        epoch_grad_norms.append(grad_norm_before_clip)
 
                         self.update_step += 1
 
@@ -270,6 +272,8 @@ class DeepQLearningAgent():
         return {
             "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
             "avg_len_path" : np.mean(epoch_path_lengths),
+            "avg_grad_norm_before_clip": np.mean(epoch_grad_norms) if len(epoch_grad_norms) > 0 else np.nan,
+            "max_grad_norm_before_clip": np.max(epoch_grad_norms) if len(epoch_grad_norms) > 0 else np.nan,
             "n_updates": self.update_step
         }
                 
@@ -292,6 +296,8 @@ class DeepQLearningAgent():
         avg_losses = []
         avg_len_path = []
         epsilons = []
+        avg_grad_norms = []
+        max_grad_norms = []
 
         #---------------------------------------- Loop over epochs --------------------------------------------------
 
@@ -304,11 +310,15 @@ class DeepQLearningAgent():
             avg_losses.append(one_epoch_metrics["avg_loss"])
             avg_len_path.append(one_epoch_metrics["avg_len_path"])
             epsilons.append(epsilon)
+            avg_grad_norms.append(one_epoch_metrics["avg_grad_norm_before_clip"])
+            max_grad_norms.append(one_epoch_metrics["max_grad_norm_before_clip"])
 
             tqdm.write(
                         f"Epoch {epoch}:" 
                         f"Loss = {one_epoch_metrics['avg_loss']:.6f}, "
                         f"Avg Path = {one_epoch_metrics['avg_len_path']:.2f}, "
+                        f"Avg Grad Norm = {one_epoch_metrics['avg_grad_norm_before_clip']:.4f}, "
+                        f"Max Grad Norm = {one_epoch_metrics['max_grad_norm_before_clip']:.4f}, "
                         f"Epsilon = {epsilon:.3f}, "
                         f"Delta = {delta: .4e}"
                     )
@@ -347,10 +357,24 @@ class DeepQLearningAgent():
         )
 
         # Save the records of average losses, length of path and epsilon
-        save_Data(self.paths, avg_losses, avg_len_path, epsilons)
-
+        save_Data(
+            self.paths,
+            avg_losses,
+            avg_len_path,
+            epsilons,
+            avg_grad_norms,
+            max_grad_norms
+        )
+        
         # Plot the convergence of the algorithm
-        plot_Convergence(self.paths, avg_losses, avg_len_path)
+        plot_Convergence(
+            self.paths,
+            avg_losses,
+            avg_len_path,
+            avg_grad_norms,
+            max_grad_norms
+        )
+        
         # The NN trained is a function that must find the optimal policy
         return self.evaluation_q_network
         

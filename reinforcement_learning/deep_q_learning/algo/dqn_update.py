@@ -1,5 +1,31 @@
-import numpy as np 
 import torch 
+import numpy as np 
+
+def _compute_grad_norm(
+        parameters,
+        norm_type: float=2.0
+) -> float:
+        """
+        Compute total gradient norm over all parameters.
+        This is measured AFTER loss.backward() and BEFORE clipping.
+        """
+        grads = [
+                p.grad.detach()
+                for p in parameters
+                if p.grad is not None
+        ]
+
+        if len(grads) == 0:
+                return 0.0
+
+        if norm_type == float("inf"):
+                return max(g.abs().max().item() for g in grads)
+
+        total = torch.norm(
+                torch.stack([torch.norm(g, norm_type) for g in grads]),
+                norm_type
+        )
+        return total.item()
 
 # Learn function for DQN
 def dqn_learn_update_step(
@@ -79,12 +105,15 @@ def dqn_learn_update_step(
         optimizer.zero_grad()
         loss.backward()
 
+        # ---- Measure gradient norm BEFORE clipping ----
+        grad_norm_before_clip = _compute_grad_norm(eval_net.parameters())
+
         if do_gradient_clipping:
                 torch.nn.utils.clip_grad_norm_(eval_net.parameters(), max_norm)
         
         optimizer.step()
 
-        return loss.item()
+        return loss.item(), grad_norm_before_clip
 
 def dqn_target_update(
                 eval_net,

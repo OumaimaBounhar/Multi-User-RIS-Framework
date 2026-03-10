@@ -140,7 +140,7 @@ class ExperimentPaths:
         """ Save the convergence plot of DQN training as a PNG file"""
         return os.path.join(
             self.dqn_checkpoints_dir, 
-            "convergence_deep_q_learning.png"
+            "convergence_deep_q_learning_loss.png"
         )
     
     @property
@@ -151,6 +151,20 @@ class ExperimentPaths:
             "convergence_deep_q_learning_len_path.png"
         )
     
+    @property
+    def dqn_grad_norm_plot(self) -> str:
+        return os.path.join(
+            self.dqn_checkpoints_dir,
+            "convergence_deep_q_learning_grad_norm.png"
+        )
+
+    @property
+    def dqn_grad_norm_max_plot(self) -> str:
+        return os.path.join(
+            self.dqn_checkpoints_dir,
+            "convergence_deep_q_learning_grad_norm_max.png"
+        )
+
     def dqn_metrics_csv(self, name: str) -> str:
         """Returns path for losses.csv, avgLenPath.csv, or epsilons.csv.
         Args:
