@@ -49,8 +49,8 @@ def main():
                 codebook_specs=codebook_specs,
 
                 SNR=10,
-                snr_values = [0,5,10,20],
-                # snr_values = [20],
+                # snr_values = [0,5,10,20],
+                snr_values = [20],
                 type_channel="half-spaced ULAs",
                 type_modulation="BPSK", 
                 mean_noise=0,
@@ -79,14 +79,14 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=2000,
-                # n_epochs = 2,
+                # n_epochs=2000,
+                n_epochs = 1,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=2000,
-                # n_episodes=2,
+                # n_episodes=2000,
+                n_episodes=1,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
                 # n_channels_train_QL=1,
@@ -102,8 +102,8 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=200,
-                # saving_freq=1,
+                # saving_freq=200,
+                saving_freq=1,
                 test_freq=1,
                 
                 precision=2,  

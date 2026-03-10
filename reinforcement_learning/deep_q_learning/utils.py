@@ -106,7 +106,7 @@ def save_Data(
         avg_grad_norms=None,
         max_grad_norms=None
 ):
-    os.makedirs(paths.dqn_checkpoints_dir, exist_ok=True)
+    os.makedirs(paths.dqn_metrics_dir, exist_ok=True)
     
     # Save loss values in a CSV file
     np.savetxt(
@@ -167,7 +167,7 @@ def save_Data(
 def save_model_complexity(
                             model,
                             params_dict, 
-                            filename="complexity_report.txt"
+                            paths: ExperimentPaths
 ):
     """
     Compute and save the model complexity and memory usage.
@@ -215,8 +215,8 @@ def save_model_complexity(
     (computed analytically in paper)
     """
     
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, "w") as f:
+    os.makedirs(paths.dqn_metrics_dir, exist_ok=True)
+    with open(paths.complexity_report_file, "w") as f:
         f.write(report)
     
-    print(f"[INFO] Complexity report saved to {filename}")
+    print(f"[INFO] Complexity report saved to {paths.complexity_report_file}")

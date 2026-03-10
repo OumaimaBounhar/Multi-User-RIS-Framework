@@ -17,15 +17,15 @@ class Dataset_probability:
     
     We either have access to the real law of the channel, or just to a set of elements measured (from a dataset).
     """
-    def __init__(self,
-                parameters:Parameters,
-                channel:Channel,
-                codebooks:Codebooks,
-                feedback:Feedback,
-                min_representatives:int = 200,
-                Noisy_samples:bool=False,
-                dataset_samples=[],
-                filename = "example"):
+    def __init__(
+        self,
+        parameters:Parameters,
+        channel:Channel,
+        codebooks:Codebooks,
+        feedback:Feedback,
+        min_representatives:int = 200,
+        Noisy_samples:bool=False
+    ):
         
         self.parameters = parameters
         self.channel = channel
@@ -34,7 +34,6 @@ class Dataset_probability:
         self.min_representatives = min_representatives
         self.max_samples = 2*min_representatives*parameters.size_codebooks[0]  
         self.Noisy_samples = Noisy_samples
-        self.filename = filename
         # If a dataset is available put it here
         self.set_new_MC()
         
@@ -97,16 +96,9 @@ class Dataset_probability:
         
         self.n_representant_class = n_representant_class
         self.List_Representant_Classes = List_Representant_Classes
-        self.save()
+
         print(f"Sample generation complete: {n_samples} total samples collected.")
 
-    def save(self):
-        """Saves everything in a file with a number that is a function of the parameters
-        """
-        newpath = self.filename
-        with open(newpath+"/Dataset.pickle", "wb") as file_:
-            pickle.dump(self, file_, -1)
-        
     #def get_representant_class(self):
         #return self.n_representant_class
     

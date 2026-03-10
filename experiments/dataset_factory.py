@@ -67,8 +67,7 @@ class DatasetFactory:
                 channel = channel, 
                 codebooks = codebooks, 
                 feedback = feedback, 
-                Noisy_samples= noisy_samples,
-                filename = store.paths.root
+                Noisy_samples= noisy_samples
                 )
             store.save_dataset(dataset)
             print(f"[INFO] Dataset saved to {store.paths.dataset_pickle}")

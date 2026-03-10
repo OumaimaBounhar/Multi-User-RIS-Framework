@@ -37,32 +37,188 @@ class ExperimentPaths:
             )
         )
     
-    # --------------------------- General folders ---------------------------
+    # --------------------------- Parameters ---------------------------
     @property # allows to use a method like an attribute
     def config_dir(self) -> str:
         return os.path.join(self.root, "config")
-
+    
+    def params_file(self, mode: str) -> str:
+        return os.path.join(self.config_dir, f"params_{mode}.txt")
+    
+    # --------------------------- Dataset ---------------------------
     @property
     def dataset_dir(self) -> str:
         return os.path.join(self.root, "dataset")
 
     @property
-    def noise_dir(self) -> str:
-        return os.path.join(self.root, "noise")
-
+    def dataset_pickle(self) -> str:
+        return os.path.join(self.dataset_dir, "Dataset.pickle")
+    
+    # --------------------------- Q-Learning  ---------------------------
     @property
     def q_learning_dir(self) -> str:
         return os.path.join(self.root, "q_learning")
+    
+    @property
+    def q_matrices_dir(self) -> str:
+        return os.path.join(
+            self.q_learning_dir, 
+            "Q_matrices"
+        )
 
+    @property
+    def q_policies_dir(self) -> str:
+        return os.path.join(self.q_learning_dir, "policies")
+
+    @property
+    def q_plots_dir(self) -> str:
+        return os.path.join(self.q_learning_dir, "plots")
+    
+    @property
+    def q_metrics_dir(self) -> str:
+        return os.path.join(self.q_learning_dir, "metrics")
+
+    def q_matrix_file(self, episode: int) -> str:
+        """ Save the Q-matrix as a CSV file
+        Args:
+            episode (int): The episode number after which the Q-matrix is saved
+        Returns:
+            str: The path to save the Q-matrix CSV file
+        """
+        
+        return os.path.join(
+            self.q_matrices_dir, 
+            f"Q_matrix_after_{episode}episodes.csv"
+        )
+    
+    def ql_frequency_matrix_file(self, n_episodes, delta, alpha) -> str:
+        """ Save the frequency of updating a state matrix as a CSV file"""
+        return os.path.join(
+            self.q_matrices_dir, 
+            f"frequency_after_{n_episodes}_episodes_delta_{delta}_alpha_{alpha}.csv"
+        )
+
+    def policy_matrix_file(self, episode: int) -> str:
+        """ Save the policy matrix as a CSV file
+        Args:
+            episode (int): The episode number after which the policy matrix is saved
+        Returns:
+            str: The path to save the policy matrix CSV file.
+        """
+        
+        return os.path.join(
+            self.q_policies_dir, 
+            f"policy_after_{episode}episodes.csv"
+        )
+
+    @property
+    def ql_convergence_plot_file(self) -> str:
+        """ Save the convergence plot of Q-Learning training as a PNG file"""
+        return os.path.join(
+            self.q_plots_dir, 
+            "convergence_q_learning_train.png"
+        )
+
+    @property
+    def ql_training_metrics_file(self) -> str:
+        """ Save the training metrics of the average path length as a CSV file"""
+        return os.path.join(
+            self.q_metrics_dir,
+            "Data_len_path_training.dat"
+        )
+
+    # --------------------------- Deep Q-Learning  ---------------------------
     @property
     def dqn_dir(self) -> str:
         return os.path.join(self.root, "deep_q_learning")
+    
+    @property
+    def dqn_checkpoints_dir(self) -> str:
+        """Directory to save DQN checkpoints."""
+        return os.path.join(
+            self.dqn_dir, 
+            "checkpoints"
+        )
+    
+    @property
+    def dqn_metrics_dir(self) -> str:
+        return os.path.join(self.dqn_dir, "metrics")
 
+    @property
+    def dqn_plots_dir(self) -> str:
+        return os.path.join(self.dqn_dir, "plots")
+
+    def dqn_checkpoint_file(self, epoch: Union[int, str], net_type: str) -> str:
+        """ Save the model checkpoints of DQN training as a PTH file
+        =======
+        Args:
+        =======
+        @net_type (str) : should be either 'eval' or 'target'
+        @epoch (Union[int, str]) : can be an integer or a string to save the "last" models
+
+        Returns:
+        -------
+            str : path to save the model checkpoint
+        """
+        prefix = f"epoch_{epoch}" if isinstance(epoch, int) else str(epoch)
+        return os.path.join(
+            self.dqn_checkpoints_dir, 
+            f"{prefix}_{net_type}.pth"
+        )
+    
+    @property
+    def dqn_loss_plot(self) -> str:
+        """ Save the convergence plot of DQN training as a PNG file"""
+        return os.path.join(
+            self.dqn_plots_dir, 
+            "convergence_deep_q_learning_loss.png"
+        )
+    
+    @property
+    def dqn_path_plot(self) -> str:
+        """ Save the convergence plot of DQN training for path length as a PNG file"""
+        return os.path.join(
+            self.dqn_plots_dir, 
+            "convergence_deep_q_learning_len_path.png"
+        )
+    
+    @property
+    def dqn_grad_norm_plot(self) -> str:
+        return os.path.join(
+            self.dqn_plots_dir,
+            "convergence_deep_q_learning_grad_norm.png"
+        )
+
+    @property
+    def dqn_grad_norm_max_plot(self) -> str:
+        return os.path.join(
+            self.dqn_plots_dir,
+            "convergence_deep_q_learning_grad_norm_max.png"
+        )
+
+    def dqn_metrics_csv(self, name: str) -> str:
+        """Returns path for losses.csv, avgLenPath.csv, or epsilons.csv.
+        Args:
+        name (str): should be either "losses", "avgLenPath", or "epsilons"
+        """
+        return os.path.join(
+            self.dqn_metrics_dir, 
+            f"{name}.csv"
+        )
+    
+    @property
+    def complexity_report_file(self) -> str:
+        """ Returns path for the complexity report of DQN testing."""
+        return os.path.join(
+            self.dqn_checkpoints_dir, 
+            "complexity_report.txt"
+        )
+
+    # --------------------------- Test sub-folders ---------------------------
     @property
     def tests_dir(self) -> str:
         return os.path.join(self.root, "tests")
-
-    # --------------------------- Test subfolders ---------------------------
+    
     @property
     def test_probabilities_dir(self) -> str:
         return os.path.join(self.tests_dir, "probabilities")
@@ -90,151 +246,7 @@ class ExperimentPaths:
     @property
     def test_success_plots_dir(self) -> str:
         return os.path.join(self.test_plots_dir, "success")
-
-    # --------------------------- General files ---------------------------
-    def params_file(self, mode: str) -> str:
-        return os.path.join(self.config_dir, f"params_{mode}.txt")
-
-    @property
-    def dataset_pickle(self) -> str:
-        return os.path.join(self.dataset_dir, "Dataset.pickle")
-
-    @property
-    def noise_csv(self) -> str:
-        return os.path.join(self.noise_dir, "Noise_parameters.csv")
     
-    # --------------------------- Q-Learning  ---------------------------
-    @property
-    def q_matrices_dir(self) -> str:
-        return os.path.join(
-            self.q_learning_dir, 
-            "Q_matrices"
-        )
-
-    def q_matrix_file(self, episode: int) -> str:
-        """ Save the Q-matrix as a CSV file
-        Args:
-            episode (int): The episode number after which the Q-matrix is saved
-        Returns:
-            str: The path to save the Q-matrix CSV file
-        """
-        
-        return os.path.join(
-            self.q_matrices_dir, 
-            f"Q_matrix_after_{episode}episodes.csv"
-        )
-
-    def policy_matrix_file(self, episode: int) -> str:
-        """ Save the policy matrix as a CSV file
-        Args:
-            episode (int): The episode number after which the policy matrix is saved
-        Returns:
-            str: The path to save the policy matrix CSV file.
-        """
-        
-        return os.path.join(
-            self.q_matrices_dir, 
-            f"policy_after_{episode}episodes.csv"
-        )
-
-    def ql_frequency_matrix_file(self, n_episodes, delta, alpha) -> str:
-        """ Save the frequency of updating a state matrix as a CSV file"""
-        return os.path.join(
-            self.q_matrices_dir, 
-            f"frequency_after_{n_episodes}_episodes_delta_{delta}_alpha_{alpha}.csv"
-        )
-    
-    @property
-    def ql_convergence_plot_file(self) -> str:
-        """ Save the convergence plot of Q-Learning training as a PNG file"""
-        return os.path.join(
-            self.q_matrices_dir, 
-            "convergence_q_learning_train.png"
-        )
-
-    @property
-    def ql_training_metrics_file(self) -> str:
-        """ Save the training metrics of the average path length as a CSV file"""
-        return os.path.join(
-            self.q_matrices_dir,
-            "Data_len_path_training.dat"
-        )
-
-    # --------------------------- Deep Q-Learning  ---------------------------
-    @property
-    def dqn_checkpoints_dir(self) -> str:
-        """Directory to save DQN checkpoints."""
-        return os.path.join(
-            self.dqn_dir, 
-            "checkpoints"
-        )
-
-    def dqn_checkpoint_file(self, epoch: Union[int, str], net_type: str) -> str:
-        """ Save the model checkpoints of DQN training as a PTH file
-        =======
-        Args:
-        =======
-        @net_type (str) : should be either 'eval' or 'target'
-        @epoch (Union[int, str]) : can be an integer or a string to save the "last" models
-
-        Returns:
-        -------
-            str : path to save the model checkpoint
-        """
-        prefix = f"epoch_{epoch}" if isinstance(epoch, int) else str(epoch)
-        return os.path.join(
-            self.dqn_checkpoints_dir, 
-            f"{prefix}_{net_type}.pth"
-        )
-    
-    @property
-    def dqn_loss_plot(self) -> str:
-        """ Save the convergence plot of DQN training as a PNG file"""
-        return os.path.join(
-            self.dqn_checkpoints_dir, 
-            "convergence_deep_q_learning_loss.png"
-        )
-    
-    @property
-    def dqn_path_plot(self) -> str:
-        """ Save the convergence plot of DQN training for path length as a PNG file"""
-        return os.path.join(
-            self.dqn_checkpoints_dir, 
-            "convergence_deep_q_learning_len_path.png"
-        )
-    
-    @property
-    def dqn_grad_norm_plot(self) -> str:
-        return os.path.join(
-            self.dqn_checkpoints_dir,
-            "convergence_deep_q_learning_grad_norm.png"
-        )
-
-    @property
-    def dqn_grad_norm_max_plot(self) -> str:
-        return os.path.join(
-            self.dqn_checkpoints_dir,
-            "convergence_deep_q_learning_grad_norm_max.png"
-        )
-
-    def dqn_metrics_csv(self, name: str) -> str:
-        """Returns path for losses.csv, avgLenPath.csv, or epsilons.csv.
-        Args:
-        name (str): should be either "losses", "avgLenPath", or "epsilons"
-        """
-        return os.path.join(
-            self.dqn_checkpoints_dir, 
-            f"{name}.csv"
-        )
-    
-    @property
-    def complexity_report_file(self) -> str:
-        """ Returns path for the complexity report of DQN testing."""
-        return os.path.join(
-            self.dqn_checkpoints_dir, 
-            "complexity_report.txt"
-        )
-
     # --------------------------- Test files ---------------------------
     def test_summary_file(self, epoch: int, snr: Union[int, float]) -> str:
         return os.path.join(
@@ -273,6 +285,14 @@ class ExperimentPaths:
         )
 
     # --------------------------- Noise files ---------------------------
+    @property
+    def noise_dir(self) -> str:
+        return os.path.join(self.root, "noise")
+    
+    @property
+    def noise_csv(self) -> str:
+        return os.path.join(self.noise_dir, "Noise_parameters.csv")
+    
     def noise_csv_per_snr(self, snr: Union[int, float]) -> str:
         return os.path.join(
             self.noise_dir,
@@ -304,10 +324,18 @@ class Store:
             self.paths.config_dir,
             self.paths.dataset_dir,
             self.paths.noise_dir,
-            self.paths.q_learning_dir,
-            self.paths.q_matrices_dir,
+
             self.paths.dqn_dir,
             self.paths.dqn_checkpoints_dir,
+            self.paths.dqn_metrics_dir,
+            self.paths.dqn_plots_dir,
+
+            self.paths.q_learning_dir,
+            self.paths.q_matrices_dir,
+            self.paths.q_policies_dir,
+            self.paths.q_metrics_dir,
+            self.paths.q_plots_dir,
+
             self.paths.tests_dir,
             self.paths.test_probabilities_dir,
             self.paths.test_strengths_dir,
