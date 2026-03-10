@@ -11,24 +11,24 @@ def main():
     set_seed(42)
 
     all_size_of_codebooks = [
-                                # [8, 14],
-                                [16, 30],
+                                [8, 14],
+                                # [16, 30],
                                 # [32, 62],
                                 # [64, 126]
                             ]
 
     all_codebook_specs = [
-                            # [CodebookSpec(kind="narrow", N=8),
-                            # CodebookSpec(kind="hierarchical", K=3, M=2)],
-                            [CodebookSpec(kind="narrow", N=16),
-                            CodebookSpec(kind="hierarchical", K=4, M=2)],
+                            [CodebookSpec(kind="narrow", N=8),
+                            CodebookSpec(kind="hierarchical", K=3, M=2)],
+                            # [CodebookSpec(kind="narrow", N=16),
+                            # CodebookSpec(kind="hierarchical", K=4, M=2)],
                         ]
 
     delta_values = [
                     # 3e-1,
                     # 2e-1,
-                    1e-1, # session DQL Example_6
-                    # 1e-2, # session dql Example_5
+                    # 1e-1, # session DQL Example_6
+                    1e-2, # session dql Example_5 and 30
                     # 2e-2
                     ]
 
@@ -39,7 +39,7 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "In this experiment, RSE noise is used again in the methods. Codebook [16,30] used.",
+                experiment_note = "In this experiment, RSE noise is used again in the methods. Codebook [8,14] used. Gamma reduced to 0.94. Delta reduced to 1e-2",
 
                 N_R=64, 
                 N_T=1, 
@@ -58,7 +58,7 @@ def main():
                 std_channel=[], 
                 sigma_alpha=0, 
 
-                gamma=0.98,
+                gamma=0.94,
                 _greedy_mode = False,
 
                 learning_rate_init=1e-4,
@@ -79,14 +79,14 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=2000,
-                # n_epochs = 1,
+                n_epochs=10000,
+                # n_epochs = 2,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=2000,
-                # n_episodes=1,
+                n_episodes=10000,
+                # n_episodes=2,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
                 # n_channels_train_QL=1,
@@ -102,12 +102,12 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=200,
+                saving_freq=500,
                 # saving_freq=1,
                 test_freq=1,
 
-                continue_training = True,
-                recover_checkpoint_path = "./Data/Example_25",
+                continue_training = False,
+                recover_checkpoint_path = "./Data/Example_30",
                 
                 precision=2,  
                 len_window_channel=10,

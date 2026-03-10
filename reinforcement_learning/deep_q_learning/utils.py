@@ -119,7 +119,11 @@ def load_dqn_training_state(paths: ExperimentPaths, device):
             f"No DQN recovery checkpoint found at {checkpoint_path}"
         )
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(
+        checkpoint_path, 
+        map_location=device,
+        weights_only=False
+    )
     print(f"[INFO] Loaded DQN training state from {checkpoint_path}")
     return checkpoint
 
