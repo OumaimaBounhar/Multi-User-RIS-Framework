@@ -106,7 +106,6 @@ class Environment():
                 "distance" : float(min_distance),
                 "Terminal_state": is_terminal
             }
-            
             return closest_state_index, reward, info
 
         if model_type.upper() == 'DQN':
@@ -122,7 +121,6 @@ class Environment():
                 "chosen_action" : np.argmax(posterior), 
                 "success": bool(terminated)
             }
-
             return posterior, reward, terminated, truncated, info
     
     def get_dataset(self):

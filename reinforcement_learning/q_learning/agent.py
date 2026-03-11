@@ -269,15 +269,9 @@ class QLearningAgent():
         all_len_path = []
         
         for _ in range(self.n_channels_train):
-            
-            ## Start at the initial state
-            current_state_index = 0 
-            
+                        
             # Length of the path metric to measure Policy efficiency
             length_path = 0 
-            
-            ## Set the prior at the initial state
-            self.environment.reset_prior()
             
             ## Generates a new channel (take it randomly from the dataset given in the environment)
             index_class_channel = np.random.randint(0,len(self.dataset_train)) 
@@ -287,27 +281,47 @@ class QLearningAgent():
             done = False
         
             for _ in range(self.n_time_steps):
+
+                """ ---------------------Modification during last test----------------------- """
+                ## Start at the initial state
+                current_state_index = 0 
+            
+                ## Set the prior at the initial state
+                self.environment.reset_prior()
+                """ ------------------------------------------------------------------------- """
                 
-                for path in range(self.max_len_path):
+                for _ in range(self.max_len_path):
 
                     # Choose an action following Epsilon greedy Policy
-                    index_action = self.choose_action(current_state_index,epsilon)
-                        
-                    # Update the state
-                    # Reset the list of samples and put prior = posterior
-                    if path % self.parameters.len_window_channel == 0:
-                        self.environment.reset_curse_dimension()
+                    index_action = self.choose_action(
+                        current_state_index,
+                        epsilon
+                    )
                     
-                    next_state_index , reward, info = self.environment.step(index_channel,index_action, model_type = 'QL')
+                    next_state_index , reward, info = self.environment.step(
+                        index_channel,
+                        index_action,
+                        model_type = 'QL'
+                    )
 
                     # Save the reward
                     length_path += reward
                     
                     # Update the state-action value function
-                    self.update_Q_matrix(alpha, gamma, reward, current_state_index, next_state_index, index_action, is_terminal= info["Terminal_state"])
+                    self.update_Q_matrix(
+                        alpha, 
+                        gamma, 
+                        reward, 
+                        current_state_index, 
+                        next_state_index, 
+                        index_action, 
+                        is_terminal= info["Terminal_state"]
+                    )
                     
                     current_state_index = next_state_index
-                    current_state = self.environment.state_space.get_state_from_index(current_state_index)
+                    current_state = self.environment.state_space.get_state_from_index(
+                        current_state_index
+                    )
                     
                     delta = self.environment.get_delta_current()
                     

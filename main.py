@@ -11,24 +11,24 @@ def main():
     set_seed(42)
 
     all_size_of_codebooks = [
-                                [8, 14],
-                                # [16, 30],
+                                # [8, 14],
+                                [16, 30],
                                 # [32, 62],
                                 # [64, 126]
                             ]
 
     all_codebook_specs = [
-                            [CodebookSpec(kind="narrow", N=8),
-                            CodebookSpec(kind="hierarchical", K=3, M=2)],
-                            # [CodebookSpec(kind="narrow", N=16),
-                            # CodebookSpec(kind="hierarchical", K=4, M=2)],
+                            # [CodebookSpec(kind="narrow", N=8),
+                            # CodebookSpec(kind="hierarchical", K=3, M=2)],
+                            [CodebookSpec(kind="narrow", N=16),
+                            CodebookSpec(kind="hierarchical", K=4, M=2)],
                         ]
 
     delta_values = [
                     # 3e-1,
                     # 2e-1,
-                    # 1e-1, # session DQL Example_6
-                    1e-2, # session dql Example_5 and 30
+                    1e-1, # session DQL Example_6 and 29
+                    # 1e-2, # session dql Example_5 and 30
                     # 2e-2
                     ]
 
@@ -39,7 +39,7 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "In this experiment, RSE noise is used again in the methods. Codebook [8,14] used. Gamma reduced to 0.94. Delta reduced to 1e-2",
+                experiment_note = "Codebook [16,30] used. Delta at 1e-1. Removing reset_curse_dimension() from both loops in QL and DQL. Raised tau to 0.005.",
 
                 N_R=64, 
                 N_T=1, 
@@ -96,7 +96,7 @@ def main():
                 max_norm=0.5,
                 do_gradient_clipping = True,
                 
-                tau = 0.001,
+                tau = 0.005,
                 freq_update_target=100,
                 targetNet_update_method = "soft",
                 

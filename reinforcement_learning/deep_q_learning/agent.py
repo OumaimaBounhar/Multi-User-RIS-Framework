@@ -203,14 +203,7 @@ class DeepQLearningAgent():
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
 
         for _ in range(self.n_channels_train):
-                
-                ## Always start from the initial state
-                current_state = self.environment.state_space.get_state_from_index(0) 
-                
-                ## Set the prior at the initial state
-                self.environment.reset_prior()
-                len_window_channel = self.simu_parameters.len_window_channel
-                
+                                
                 # Training : Pick a random channel from dataset
                 index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
                 index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
@@ -221,6 +214,13 @@ class DeepQLearningAgent():
 
                 for _ in range(self.n_time_steps):
                     
+                    """ -----------------------------Modification during last test-------------------------------------------- """
+                    ## Always start from the initial state
+                    current_state = self.environment.state_space.get_state_from_index(0) 
+                    
+                    ## Set the prior at the initial state
+                    self.environment.reset_prior()
+                    """ ------------------------------------------------------------------------- """
                     ## Track path length as number of actions are taken to measure how efficient the policy is
                     path_len = 0
                     episode_reward = 0.0
@@ -228,10 +228,6 @@ class DeepQLearningAgent():
                     #---------------------------------------- Loop until reaching the maximum length of path allowed --------------------------------------------------
 
                     for path in range(self.max_len_path):
-
-                        # Reset the curse of dimension : reset the list of samples and put prior = posterior
-                        if path % len_window_channel == 0:
-                            self.environment.reset_curse_dimension()
 
                         # Action selection
                         index_action = self.choose_action(
@@ -301,20 +297,20 @@ class DeepQLearningAgent():
                         if self.targetNet_update_method.lower() == "soft": 
                             # tau is typically small : 1e-3 to 5e-3 (sometimes 1e-2). Soft update is already “gentle”. Doing it every step is standard and stable.
                             dqn_target_update(
-                                                self.evaluation_q_network, 
-                                                self.target_q_network, 
-                                                self.tau, 
-                                                self.targetNet_update_method
-                                                )
+                                self.evaluation_q_network, 
+                                self.target_q_network, 
+                                self.tau, 
+                                self.targetNet_update_method
+                            )
 
                         if self.targetNet_update_method.lower() == "hard": 
                             if self.update_step % self.freq_update_target == 0:
                                 dqn_target_update(
-                                                    self.evaluation_q_network, 
-                                                    self.target_q_network, 
-                                                    self.tau, 
-                                                    self.targetNet_update_method
-                                                )
+                                    self.evaluation_q_network, 
+                                    self.target_q_network, 
+                                    self.tau, 
+                                    self.targetNet_update_method
+                            )
         return {
             "avg_loss": np.mean(epoch_losses) if len(epoch_losses) > 0 else np.nan,
             "avg_len_path" : np.mean(epoch_path_lengths),
