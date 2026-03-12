@@ -17,6 +17,7 @@ class Parameters :
     def __init__(   self, 
                     
                     experiment_note: str = "",
+                    experiment_seed: int = 42,
                     
                     N_R:int = 64, 
                     N_T:int = 1, 
@@ -88,6 +89,7 @@ class Parameters :
         
         ### More details about the experiment ###
         self.experiment_note = experiment_note
+        self.experiment_seed = experiment_seed
 
         ### For the channel ###
         self.N_R = N_R # Number antennas at the Receiver
@@ -216,6 +218,9 @@ class Parameters :
     
     def get_common_parameters(self):
         return {
+            # Experiment
+            "experiment_seed": self.experiment_seed,
+
             # System / channel
             "N_R": self.N_R,
             "N_T": self.N_T,

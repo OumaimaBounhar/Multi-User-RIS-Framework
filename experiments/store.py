@@ -44,7 +44,10 @@ class ExperimentPaths:
     
     def params_file(self, mode: str) -> str:
         return os.path.join(self.config_dir, f"params_{mode}.txt")
-    
+
+    def params_resume_training_file(self, mode: str) -> str:
+        return os.path.join(self.config_dir, f"params_resume_training_{mode}.txt")
+
     # --------------------------- Dataset ---------------------------
     @property
     def dataset_dir(self) -> str:

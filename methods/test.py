@@ -262,9 +262,7 @@ class Test:
         @checkpoints_dir_dql: directory where DQN checkpoints are stored
         @mode: 'dqn' (tests baselines + DQN), 'ql' (tests baselines + QL), or 'both' (tests all).   
         """
-        # Save params back in Parameters class
         paths = testing_objects_dict["paths"]
-        self.parameters.save_to_file(paths.params_file(mode), mode)
 
         # Logic to find checkpoints based on mode
         if mode in ('both', 'dqn'):

@@ -11,17 +11,17 @@ def main():
     set_seed(42)
 
     all_size_of_codebooks = [
-                                # [8, 14],
-                                [16, 30],
+                                [8, 14],
+                                # [16, 30],
                                 # [32, 62],
                                 # [64, 126]
                             ]
 
     all_codebook_specs = [
-                            # [CodebookSpec(kind="narrow", N=8),
-                            # CodebookSpec(kind="hierarchical", K=3, M=2)],
-                            [CodebookSpec(kind="narrow", N=16),
-                            CodebookSpec(kind="hierarchical", K=4, M=2)],
+                            [CodebookSpec(kind="narrow", N=8),
+                            CodebookSpec(kind="hierarchical", K=3, M=2)],
+                            # [CodebookSpec(kind="narrow", N=16),
+                            # CodebookSpec(kind="hierarchical", K=4, M=2)],
                         ]
 
     delta_values = [
@@ -32,14 +32,19 @@ def main():
                     # 2e-2
                     ]
 
-    for size_codebooks, codebook_specs in zip(all_size_of_codebooks, all_codebook_specs):
-        for delta in delta_values:
+    base_seed = 42
+
+    for i, (size_codebooks, codebook_specs) in enumerate(zip(all_size_of_codebooks, all_codebook_specs)):
+        for j, delta in enumerate(delta_values):
+            exp_seed = base_seed + 1000*i + j
+            set_seed(exp_seed)
             print("="*80)
             print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
             print("="*80)
 
             parameters = Parameters(    
                 experiment_note = "Codebook [16,30] used. Delta at 1e-1. Removing reset_curse_dimension() from both loops in QL and DQL. Raised tau to 0.005.",
+                experiment_seed = exp_seed,
 
                 N_R=64, 
                 N_T=1, 
@@ -49,8 +54,8 @@ def main():
                 codebook_specs=codebook_specs,
 
                 SNR=10,
-                snr_values = [0,5,10,20],
-                # snr_values = [20],
+                # snr_values = [0,5,10,20],
+                snr_values = [20],
                 type_channel="half-spaced ULAs",
                 type_modulation="BPSK", 
                 mean_noise=0,
@@ -79,14 +84,14 @@ def main():
                 batch_size=256,
                 replay_buffer_memory_size=120000,
 
-                n_epochs=10000,
-                # n_epochs = 2,
+                # n_epochs=10000,
+                n_epochs = 2,
                 n_time_steps_dqn=64,
                 n_channels_train_DQN=5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes=10000,
-                # n_episodes=2,
+                # n_episodes=10000,
+                n_episodes=2,
                 n_time_steps_ql=64,
                 n_channels_train_QL=5,
                 # n_channels_train_QL=1,
@@ -102,12 +107,12 @@ def main():
                 
                 Train_Deep_Q_Learning=True,
                 Train_Q_Learning=True,
-                saving_freq=500,
-                # saving_freq=1,
+                # saving_freq=500,
+                saving_freq=1,
                 test_freq=1,
 
                 continue_training = False,
-                recover_checkpoint_path = "./Data/Example_30",
+                recover_checkpoint_path = "./Data/Example_34",
                 
                 precision=2,  
                 len_window_channel=10,
@@ -127,7 +132,16 @@ def main():
 
             store = Store(paths)
 
+            # Save experiment parameters
+            if parameters.continue_training:
+                params_path = store.paths.params_resume_training_file("both")
+            else:
+                params_path = store.paths.params_file("both")
+
+            parameters.save_to_file(params_path, params_type="both")
+
             print(f"\n[EXPERIMENT] root = {store.paths.root}")
+            print(f"[EXPERIMENT] params  = {store.paths.params_file('both')}")
             print(f"[EXPERIMENT] dataset = {store.paths.dataset_pickle}")
             print(f"[EXPERIMENT] noise   = {store.paths.noise_csv}\n")
             
