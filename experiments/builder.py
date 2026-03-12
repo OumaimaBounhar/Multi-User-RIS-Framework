@@ -22,7 +22,7 @@ class ExperimentBuilder:
         self.parameters = parameters
         self.store = store
     
-    def build(self) -> Runner:
+    def build(self, dataset_mode=None, noise_mode=None) -> Runner:
         # System model
 
         # The channel model
@@ -49,11 +49,12 @@ class ExperimentBuilder:
             signal
             ) 
 
-        dataset_mode = (
-            DatasetMode.REUSE
-            if self.parameters.continue_training
-            else DatasetMode.GENERATE
-        )
+        if dataset_mode is None:
+            dataset_mode = (
+                DatasetMode.REUSE
+                if self.parameters.continue_training
+                else DatasetMode.GENERATE
+            )
 
         # Generate dataset
         dataset_factory = DatasetFactory()
@@ -68,14 +69,20 @@ class ExperimentBuilder:
             )
 
         # Generate noise parameters (mean,std) 
-        noise_factory = NoiseFactory()
+        if noise_mode is None:
+            noise_mode = (
+                NoiseMode.REUSE
+                if self.parameters.continue_training
+                else NoiseMode.FIT
+            )
+
         noise_parameters = noise_factory.get_noise_params( 
             parameters = self.parameters,
-            noise_mode=NoiseMode.FIT, 
+            noise_mode=noise_mode, 
             store = self.store,
             feedback = feedback,
             channel = channel 
-            )
+        )
 
         # Probability
         probability = Probability(

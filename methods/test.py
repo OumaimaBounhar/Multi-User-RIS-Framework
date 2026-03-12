@@ -35,6 +35,19 @@ class Test:
         self.channel = channel
         self.probability = probability
         self.DQN = DQN
+    
+    def _epoch_already_tested(
+        self, 
+        paths: ExperimentPaths, 
+        epoch: int, 
+        snr_values: List[int]
+    ):
+        return all(
+            os.path.exists(
+                paths.test_summary_file(epoch, snr)
+            )
+            for snr in snr_values
+        )
 
     def test(
         self, 
@@ -272,27 +285,32 @@ class Test:
                 if f.endswith('_eval.pth')
             ]
 
-            # sSort name of files by epoch number
+            # Sort name of files by epoch number
             dqn_files.sort(key=lambda x: int(x.split('_')[1]))
 
             for f in dqn_files:
-
                 # Extract epoch number from filename (assuming format 'checkpoint_epoch_eval.pth')
                 epoch = int(f.split('_')[1])
                 
                 if epoch % self.parameters.test_freq != 0:
                     continue
 
+                if self._epoch_already_tested(paths, epoch, testing_objects_dict["snr_values"]):
+                    continue
+
                 if self.DQN is None:
                     raise ValueError("DQN agent is required to run DQN checkpoint tests.")
 
                 device = next(self.DQN.evaluation_q_network.parameters()).device
-
                 checkpoint_path = os.path.join(checkpoints_dir_dql, f)
 
-                state_dict = torch.load(checkpoint_path, map_location=device)
+                try:
+                    state_dict = torch.load(checkpoint_path, map_location=device)
+                    self.DQN.evaluation_q_network.load_state_dict(state_dict)
 
-                self.DQN.evaluation_q_network.load_state_dict(state_dict)
+                except Exception as e:
+                    print(f"[ASYNC-EVAL] Skipping epoch {epoch} for now, checkpoint not ready: {e}")
+                    continue
 
                 self.DQN.evaluation_q_network.to(device)
                 self.DQN.evaluation_q_network.eval()

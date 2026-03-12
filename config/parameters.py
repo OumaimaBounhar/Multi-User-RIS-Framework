@@ -80,6 +80,10 @@ class Parameters :
                     continue_training: bool = False,
                     recover_checkpoint_path: Optional[str] = None,
 
+                    enable_async_eval: bool = False,
+                    async_eval_poll_seconds: int = 20,
+                    async_eval_device: str = "cpu",
+
                     precision: int = 2,  
                     len_window_channel:int = 10,
                     modification_channel=0,
@@ -129,12 +133,17 @@ class Parameters :
                 CodebookSpec(kind="hierarchical", K=3, M=2),
             ]
         self.codebook_specs = codebook_specs # Communication / Pilots
-        
+
+        ### Saving & Testing experiment
         self.saving_freq = saving_freq
         self.test_freq = test_freq
 
         self.continue_training = continue_training
         self.recover_checkpoint_path = recover_checkpoint_path
+
+        self.enable_async_eval = enable_async_eval
+        self.async_eval_poll_seconds = async_eval_poll_seconds
+        self.async_eval_device = async_eval_device
 
         ### For Q-Learning parameters ###
         self.n_episodes = n_episodes
@@ -314,6 +323,10 @@ class Parameters :
             
             "continue_training": self.continue_training,
             "recover_checkpoint_path": self.recover_checkpoint_path,
+
+            "enable_async_eval": self.enable_async_eval,
+            "async_eval_poll_seconds": self.async_eval_poll_seconds,
+            "async_eval_device": self.async_eval_device,
 
             "SNR" : self.SNR,
             "snr_values": self.snr_values,
