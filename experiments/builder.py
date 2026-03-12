@@ -37,7 +37,8 @@ class ExperimentBuilder:
         
         # The codebook for the RIS
         codebooks = Codebooks(
-            self.parameters
+            self.parameters,
+            seed=self.parameters.experiment_seed
         ) 
 
         # The feedback function between the receiver and the transmitter

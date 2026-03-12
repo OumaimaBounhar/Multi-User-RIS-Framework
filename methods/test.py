@@ -101,7 +101,8 @@ class Test:
             
             print(f'[INFO] Testing Mode: {mode} | SNR: {SNR} | Epoch: {epoch} | Std Noise: {self.parameters.std_noise}')
             
-            set_seed(1000 + SNR + epoch)
+            # Reseed to ensure reproducible test conditions
+            set_seed(42 + SNR + epoch)
 
             for _ in tqdm(range(n_ex)):
                 objs["channel"].new_channel() # New channel
@@ -279,9 +280,6 @@ class Test:
                 # Extract epoch number from filename (assuming format 'checkpoint_epoch_eval.pth')
                 epoch = int(f.split('_')[1])
                 
-                # Reseed to ensure reproducible test conditions
-                set_seed(42 + epoch)
-
                 if epoch % self.parameters.test_freq != 0:
                     continue
 

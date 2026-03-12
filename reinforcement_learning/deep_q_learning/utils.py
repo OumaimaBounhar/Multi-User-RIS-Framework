@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import torch
 import numpy as np 
+import random
 from typing import Union
 
 from experiments.store import ExperimentPaths
@@ -103,7 +104,14 @@ def save_dqn_training_state(
             "epsilons": epsilons,
             "avg_grad_norms": avg_grad_norms,
             "max_grad_norms": max_grad_norms,
-        }
+        },
+
+        "rng_state": {
+        "python_random": random.getstate(),
+        "numpy_random": np.random.get_state(),
+        "torch_cpu": torch.get_rng_state(),
+        "torch_cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+        },
     }
 
     torch.save(payload, paths.dqn_training_state_file)

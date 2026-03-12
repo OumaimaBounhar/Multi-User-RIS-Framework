@@ -16,7 +16,7 @@ class Codebooks:
     First codebook: For the communication
     Second codebook: For the pilots
     """  
-    def __init__(self, parameters:Parameters, seed: int = 0):
+    def __init__(self, parameters:Parameters, seed: int):
         self.parameters = parameters
         self.rng = np.random.default_rng(seed)
         self.set_codebooks()

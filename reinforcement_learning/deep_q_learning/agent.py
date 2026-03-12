@@ -1,4 +1,5 @@
 import torch
+import random
 import numpy as np 
 from tqdm import tqdm
 from config.parameters import Parameters
@@ -167,6 +168,15 @@ class DeepQLearningAgent():
         self.replay_buffer.terminated_memory = rb["terminated_memory"]
         self.replay_buffer.memory_counter = rb["memory_counter"]
         self.replay_buffer.idx = rb["idx"]
+
+        rng_state = checkpoint.get("rng_state", None)
+        if rng_state is not None:
+            random.setstate(rng_state["python_random"])
+            np.random.set_state(rng_state["numpy_random"])
+            torch.set_rng_state(rng_state["torch_cpu"])
+
+            if torch.cuda.is_available() and rng_state["torch_cuda"] is not None:
+                torch.cuda.set_rng_state_all(rng_state["torch_cuda"])
 
         self.start_epoch = checkpoint["epoch"] + 1
 
