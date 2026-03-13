@@ -1,16 +1,12 @@
 import os
 from typing import Dict, Any
 
-from experiments.store import Store
-from config.parameters import Parameters
-from dataset.probability import Probability
-from systemModel.channel import Channel
-from systemModel.feedback import Feedback
+from experiments.builder import ExperimentContext
 
-from reinforcement_learning.env import Environment
 from reinforcement_learning.q_learning.agent import QLearningAgent
 from reinforcement_learning.q_learning.utils import load_Policy
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
+
 from methods.methods import Methods
 from methods.test import Test
 
@@ -18,14 +14,14 @@ from methods.test import Test
 class Runner:
     """ This class is responsible for running the experiments of Q-Learning and Deep Q-Learning. It executes the training and testing loops.
     """
-    def __init__(self, *, parameters: Parameters, environment: Environment, store: Store, probability: Probability, channel: Channel, feedback: Feedback):
-        self.parameters = parameters
-        self.env = environment
-        self.store = store
-        self.probability = probability
-        self.channel = channel
-        self.feedback = feedback
-        self.filename = store.paths.root
+    def __init__(self, *, context: ExperimentContext):
+        self.context = context
+        self.parameters = context.parameters
+        self.env = context.environment
+        self.store = context.store
+        self.probability = context.probability
+        self.channel = context.channel
+        self.feedback = context.feedback
 
     def run_q_learning(self):
         """This method initializes, trains and returns the policy for Q-Learning.
@@ -81,7 +77,7 @@ class Runner:
         return agent, policy_network
 
     def _build_testing_objects_dict(self, q_policy = None) -> Dict[str, Any]:
-        """This method builds the dictionary of testing objects that will be used during the training of Deep Q-Learning.
+        """Build the dictionary of objects needed for evaluation/testing.
         """
         return {
                 "parameters": self.parameters,

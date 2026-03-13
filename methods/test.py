@@ -40,7 +40,7 @@ class Test:
         self, 
         paths: ExperimentPaths, 
         epoch: int, 
-        snr_values: List[int]
+        snr_values: list[int]
     ):
         return all(
             os.path.exists(
@@ -295,7 +295,11 @@ class Test:
                 if epoch % self.parameters.test_freq != 0:
                     continue
 
-                if self._epoch_already_tested(paths, epoch, testing_objects_dict["snr_values"]):
+                if self._epoch_already_tested(
+                    paths, 
+                    epoch, 
+                    testing_objects_dict["snr_values"]
+                ):
                     continue
 
                 if self.DQN is None:

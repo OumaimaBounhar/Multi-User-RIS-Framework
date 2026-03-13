@@ -12,17 +12,30 @@ from dataset.probability import Probability
 from reinforcement_learning.env import Environment
 from reinforcement_learning.states import State
 
-from experiments.runner import Runner
+from dataclasses import dataclass
+
+@dataclass
+class ExperimentContext:
+    """
+    Container for all objects needed to run one experiment.
+    Builder creates it, and Runner consumes it.
+    """
+    parameters: Parameters
+    store: Store
+    environment: Environment
+    probability: Probability
+    channel: Channel
+    feedback: Feedback
 
 class ExperimentBuilder:
     """ 
-    Builds all experiments objects and returns a ready-to-run Runner.
+    Builds all experiments objects and returns an ExperimentContext..
     """
     def __init__(self, *, parameters: Parameters, store: Store):
         self.parameters = parameters
         self.store = store
     
-    def build(self, dataset_mode=None, noise_mode=None) -> Runner:
+    def build(self, dataset_mode=None, noise_mode=None) -> ExperimentContext:
         # System model
 
         # The channel model
@@ -75,8 +88,10 @@ class ExperimentBuilder:
                 if self.parameters.continue_training
                 else NoiseMode.FIT
             )
+        
+        noise_factory = NoiseFactory()
 
-        noise_parameters = noise_factory.get_noise_params( 
+        noise_parameters = noise_factory.get_noise_params(
             parameters = self.parameters,
             noise_mode=noise_mode, 
             store = self.store,
@@ -104,11 +119,11 @@ class ExperimentBuilder:
             dataset_train=dataset_proba
             )
 
-        return Runner(
-            parameters= self.parameters,
-            environment= environment, 
-            store= self.store, 
-            probability= probability,
-            channel=channel,
-            feedback=feedback
-            )
+        return ExperimentContext(
+            parameters = self.parameters,
+            store = self.store,
+            environment = environment,
+            probability = probability,
+            channel = channel,
+            feedback = feedback
+        )

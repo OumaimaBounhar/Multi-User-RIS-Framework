@@ -5,6 +5,7 @@ import multiprocessing as mp
 
 from experiments.store import Store, ExperimentPaths
 from experiments.builder import ExperimentBuilder
+from experiments.runner import Runner
 from experiments.dataset_factory import DatasetMode
 from experiments.noise_factory import NoiseMode
 from methods.methods import Methods
@@ -12,7 +13,13 @@ from methods.test import Test
 from reinforcement_learning.deep_q_learning.agent import DeepQLearningAgent
 
 
-def async_eval_worker(parameters, experiment_root, mode, stop_event):
+def async_eval_worker(
+    parameters,
+    experiment_root,
+    mode,
+    stop_event,
+    q_policy=None
+):
     params_eval = copy.deepcopy(parameters)
 
     paths = ExperimentPaths(root=experiment_root)
@@ -23,10 +30,12 @@ def async_eval_worker(parameters, experiment_root, mode, stop_event):
         store=store
     )
 
-    runner = builder.build(
+    context = builder.build(
         dataset_mode=DatasetMode.REUSE,
         noise_mode=NoiseMode.REUSE
     )
+
+    runner = Runner(context=context)
 
     dqn_agent = DeepQLearningAgent(
         parameters=params_eval,
@@ -34,7 +43,7 @@ def async_eval_worker(parameters, experiment_root, mode, stop_event):
         paths=store.paths
     )
 
-    # Force async evaluation to CPU
+    # Force async evaluation to chosen device (CPU for now)
     dqn_agent.device = torch.device(params_eval.async_eval_device)
     dqn_agent.evaluation_q_network.to(dqn_agent.device)
     dqn_agent.target_q_network.to(dqn_agent.device)
@@ -45,7 +54,7 @@ def async_eval_worker(parameters, experiment_root, mode, stop_event):
         feedback=runner.feedback,
         probability=runner.probability,
         state=runner.env.state_space,
-        Policy_Q=None,
+        Policy_Q=q_policy,
         Policy_network=dqn_agent.evaluation_q_network
     )
 
@@ -57,7 +66,7 @@ def async_eval_worker(parameters, experiment_root, mode, stop_event):
         DQN=dqn_agent
     )
 
-    testing_objects_dict = runner._build_testing_objects_dict(q_policy=None)
+    testing_objects_dict = runner._build_testing_objects_dict(q_policy=q_policy)
 
     print(f"[ASYNC-EVAL] Worker started for {experiment_root} in mode={mode}")
 
@@ -79,3 +88,21 @@ def async_eval_worker(parameters, experiment_root, mode, stop_event):
     )
 
     print("[ASYNC-EVAL] Worker stopped")
+
+
+def start_async_eval_worker(
+    parameters,
+    experiment_root,
+    mode,
+    q_policy=None
+):
+    stop_event = mp.Event()
+
+    process = mp.Process(
+        target=async_eval_worker,
+        args=(parameters, experiment_root, mode, stop_event, q_policy),
+        daemon=True
+    )
+    process.start()
+
+    return stop_event, process
