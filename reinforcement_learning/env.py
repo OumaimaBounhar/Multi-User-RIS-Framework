@@ -75,19 +75,9 @@ class Environment():
         if model_type.upper() == 'QL':
 
             ## Find the closest state to the posterior probability
-            min_distance = float('inf')
-
-            for next_state_index in range(self.state_space.get_n_states()):
-
-                next_state = self.state_space.get_state_from_index(next_state_index)
-
-                ## Calculate the distance between posterior and the next state
-                distance = float(np.linalg.norm(posterior - next_state))
-
-                if distance < min_distance:
-
-                    min_distance = distance
-                    closest_state_index = next_state_index
+            distances = np.linalg.norm(self.state_space.states_space - posterior, axis=1)
+            closest_state_index = int(np.argmin(distances))
+            min_distance = float(distances[closest_state_index])
             
             next_state = self.state_space.get_state_from_index(closest_state_index)
             

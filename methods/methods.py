@@ -196,15 +196,8 @@ class Methods:
         
         ### Pilot sent ###
         ## Find the closest state to the posterior probability
-        min_distance = float('inf') #change
-        closest_state_index = -1
-        for next_state_index in range(self.state.get_n_states()):
-            next_state = self.state.get_state_from_index(next_state_index)
-            # Calculate the distance between posterior and the next state
-            distance:float = float(np.linalg.norm(current_proba - next_state))
-            if distance < min_distance:
-                min_distance = distance
-                closest_state_index = next_state_index
+        distances = np.linalg.norm(self.state.states_space - current_proba, axis=1)
+        closest_state_index = int(np.argmin(distances))
         
         best_action = int(self.Policy_Q[closest_state_index])
 
@@ -257,7 +250,8 @@ class Methods:
         ### Pilot sent ###
         device = next(self.evaluation_q_network.parameters()).device # Get the device of the network (CPU or GPU) as the agent ows the device
         state_tensor = torch.tensor(current_proba, dtype=torch.float32).to(device)
-        q_values = self.evaluation_q_network(state_tensor)
+        with torch.no_grad(): #No need for constructing a graph, reduce memory usage
+            q_values = self.evaluation_q_network(state_tensor)
         best_action = torch.argmax(q_values).item()
 
         index_codeword_tested = best_action

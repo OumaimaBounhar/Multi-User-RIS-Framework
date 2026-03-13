@@ -43,7 +43,7 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "Codebook [16,30] used. Delta at 1e-1. Removing reset_curse_dimension() from both loops in QL and DQL. Lowered tau to 0.001.",
+                experiment_note = "Codebook [16,30] used. Delta at 1e-1. Lowered tau to 0.001. Added async evals. ",
                 experiment_seed = exp_seed,
 
                 N_R = 64, 
@@ -84,14 +84,14 @@ def main():
                 batch_size = 256,
                 replay_buffer_memory_size = 120000,
 
-                # n_epochs=10000,
-                n_epochs = 10,
+                n_epochs=10000,
+                # n_epochs = 10,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
-                # n_episodes = 10000,
-                n_episodes = 10,
+                n_episodes = 10000,
+                # n_episodes = 10,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -107,8 +107,8 @@ def main():
                 
                 Train_Deep_Q_Learning = True,
                 Train_Q_Learning = True,
-                # saving_freq = 500,
-                saving_freq = 1,
+                saving_freq = 500,
+                # saving_freq = 1,
                 test_freq = 1,
                 # test_freq = 500,
 
