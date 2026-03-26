@@ -131,7 +131,9 @@ class Test:
                     # Collect indices based on mode
                     indices = [
                         methods.exhaustive(), 
-                        methods.hierarchical(), 
+                        methods.hierarchical(
+                            noisy_measurement=self.parameters.hierarchical_noisy_measurement
+                        ), 
                         methods.random_sampling()
                         ]
                     
@@ -253,9 +255,9 @@ class Test:
         plt.plot(range(1, len(successful_episodes_per_epoch) + 1), successful_episodes_per_epoch, color='b')
         plt.xlabel('Epoch')
         plt.ylabel('Number of Successful Episodes')
-        plt.title(f'Number of Successful Episodes by Epoch at SNR = {SNR}')
+        plt.title(f'Number of Successful Episodes at epoch = {epoch} & SNR = {SNR}')
         plt.grid(True)
-        plt.savefig(paths.test_success_plot(SNR))
+        plt.savefig(paths.test_success_plot(epoch, SNR))        
         plt.close()
 
         print(f"[INFO] SNR {SNR}: Success Rate {(total_successful_episodes/n_ex)*100}% | Avg Path {avg_len_path}")

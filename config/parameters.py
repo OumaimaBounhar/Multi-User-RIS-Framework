@@ -34,6 +34,7 @@ class Parameters :
                     mean_channel:float=0, 
                     std_channel:Optional[List[float]] = None, 
                     sigma_alpha = 0, 
+                    hierarchical_noisy_measurement: bool = True,
 
                     gamma: float = 0.99,
                     _greedy_mode: bool = False,
@@ -121,6 +122,7 @@ class Parameters :
         self.mean_noise = mean_noise
         self.std_noise =  math.sqrt(10**(-SNR/10))
         self.type_modulation = type_modulation
+        self.hierarchical_noisy_measurement = hierarchical_noisy_measurement
         
         ### For the codebook ###
         self.size_codebooks = size_codebooks
@@ -243,6 +245,7 @@ class Parameters :
             "mean_noise": self.mean_noise,
             "std_noise": self.std_noise,
             "type_modulation": self.type_modulation,
+            "hierarchical_noisy_measurement": self.hierarchical_noisy_measurement,
 
             # Codebooks
             "codebook_specs": [vars(spec) for spec in self.codebook_specs],

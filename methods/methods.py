@@ -112,8 +112,18 @@ class Methods:
         self.counter_exhaustive = count
         return argmax_RSE
     
-    def hierarchical(self)->int:
-        ### Hierarchical search, noise ###
+    def hierarchical(self, noisy_measurement: bool = True)->int:
+        """
+        Hierarchical search.
+
+        Args:
+        @ noisy_measurement: 
+            True  -> use noisy pilot feedback (realistic test)
+            False -> use noiseless pilot feedback (sanity check)
+
+        Returns:
+        @ hierarchical_best_beam: current best communication beam found
+        """
         count = self.counter_hierarchical # Keeps track of how many codewords have been tested so far
         K_hier, M_hier = self.K,self.M # K = total levels, M = number of branches per level
         argmax_hier = self.argmax_hierarchical # Stores the best subgroup found so far
@@ -122,23 +132,36 @@ class Methods:
         n = count%M_hier ## n is the number of the leaf tested in the tree at length k
 
         ## Pilot sent ##
-        index_beam = n + argmax_hier*M_hier + sum([M_hier**k_index for k_index in range(1,k+1)]) # index of the pilot sent n is one of the M leaves we test, M*argmaxhier is the index of the best codeword found at the parent node, and sum is to take into account our codebook
+        index_beam = (
+            n 
+            + 
+            argmax_hier * M_hier 
+            + 
+            sum(
+                [
+                    M_hier ** k_index 
+                    for k_index in range(1,k+1)
+                ]
+            )
+        ) # index of the pilot sent n is one of the M leaves we test, M*argmaxhier is the index of the best codeword found at the parent node, and sum is to take into account our codebook
 
         self.feedback.transmit(index_beam,codebook_used=1)
-        RSE = self.feedback.get_feedback(noise=True)
+        RSE = self.feedback.get_feedback(noise = noisy_measurement)
         self.list_hierarchical[count%M_hier] = RSE
 
         count += 1
         self.counter_hierarchical = count
+
         if count%M_hier == 0: ## If search is over at the k level of the tree (M codewords were tested), then test next level
-            argmax_hier = argmax_hier*M_hier + int(np.argmax(self.list_hierarchical))
+            argmax_hier = argmax_hier * M_hier + int(np.argmax(self.list_hierarchical))
             self.argmax_hierarchical = argmax_hier
+
             for elmt in range(0,M_hier):
                 self.list_hierarchical[elmt] = 0
             
         ## If search is over declare the codeword found
         # If search is over reset the counter and start again
-        if count == K_hier*M_hier:
+        if count == K_hier * M_hier:
             self.hierarchical_best_beam = argmax_hier
             self.argmax_hierarchical = 0
             self.counter_hierarchical = 0

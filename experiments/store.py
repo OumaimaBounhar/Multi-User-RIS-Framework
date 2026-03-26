@@ -292,12 +292,11 @@ class ExperimentPaths:
             f"Image_strength_epoch_{epoch}_snr_{snr}.png"
         )
 
-    def test_success_plot(self, snr: Union[int, float]) -> str:
+    def test_success_plot(self, epoch: int, snr: Union[int, float]) -> str:
         return os.path.join(
             self.test_success_plots_dir,
-            f"successful_episodes_by_epoch_at_snr_{snr}.png"
+            f"successful_episodes_epoch_{epoch}_snr_{snr}.png"
         )
-
     # --------------------------- Noise files ---------------------------
     @property
     def noise_dir(self) -> str:

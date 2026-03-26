@@ -11,25 +11,29 @@ from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
 def main():
     all_size_of_codebooks = [
-                                [8, 14],
-                                # [16, 30],
+                                [8, 14], # session dqn lame20 from 40 et lame21 from 44
+                                # [16, 30], # session DQN lame22 from 41 et lame25 from 45
                                 # [32, 62],
                                 # [64, 126]
                             ]
 
     all_codebook_specs = [
-                            [CodebookSpec(kind="narrow", N=8),
-                            CodebookSpec(kind="hierarchical", K=3, M=2)],
-                            # [CodebookSpec(kind="narrow", N=16),
-                            # CodebookSpec(kind="hierarchical", K=4, M=2)],
+                            [
+                                CodebookSpec(kind="narrow", N=8),
+                                CodebookSpec(kind="hierarchical", K=3, M=2)
+                            ],
+                        #     [
+                        #         CodebookSpec(kind="narrow", N=16),
+                        #         CodebookSpec(kind="hierarchical", K=4, M=2)
+                        #     ],
                         ]
 
     delta_values = [
-                    # 3e-1,
-                    # 2e-1,
-                    1e-1, # session DQL Example_6 and 29
-                    # 1e-2, # session dql Example_5 and 30
-                    # 2e-2
+                    1e-1, # session DQL Example_6 , 29
+                    2e-1,
+                    3e-1,
+                    # 1e-2, # session dql Example_5 , 30, 39, 40
+                    2e-2,
                     ]
 
     base_seed = 42
@@ -43,7 +47,10 @@ def main():
             print("="*80)
 
             parameters = Parameters(    
-                experiment_note = "Codebook [16,30] used. Delta at 1e-1. Lowered tau to 0.001. Added async evals. ",
+                experiment_note = (
+                    "Hierarchical baseline tested with noiseless pilot measurements for sanity check."
+                    f"Codebook {size_codebooks} used. Delta at {delta}. Tau at 0.005."
+                ),
                 experiment_seed = exp_seed,
 
                 N_R = 64, 
@@ -62,6 +69,7 @@ def main():
                 mean_channel = 0, 
                 std_channel=  [], 
                 sigma_alpha = 0, 
+                hierarchical_noisy_measurement = False,
 
                 gamma = 0.94,
                 _greedy_mode = False,
@@ -84,14 +92,14 @@ def main():
                 batch_size = 256,
                 replay_buffer_memory_size = 120000,
 
-                n_epochs=10000,
-                # n_epochs = 10,
+                # n_epochs=10000,
+                n_epochs = 10,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes = 10000,
-                # n_episodes = 10,
+                # n_episodes = 10000,
+                n_episodes = 10,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -101,14 +109,14 @@ def main():
                 max_norm = 0.5,
                 do_gradient_clipping = True,
                 
-                tau = 0.001,
+                tau = 0.005,
                 freq_update_target = 100,
                 targetNet_update_method = "soft",
                 
                 Train_Deep_Q_Learning = True,
                 Train_Q_Learning = True,
-                saving_freq = 500,
-                # saving_freq = 1,
+                # saving_freq = 500,
+                saving_freq = 1,
                 test_freq = 1,
                 # test_freq = 500,
 
