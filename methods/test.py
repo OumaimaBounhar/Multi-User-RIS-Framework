@@ -37,17 +37,36 @@ class Test:
         self.DQN = DQN
     
     def _epoch_already_tested(
-        self, 
-        paths: ExperimentPaths, 
-        epoch: int, 
-        snr_values: list[int]
+        self,
+        paths,
+        epoch,
+        snr_values
     ):
-        return all(
-            os.path.exists(
-                paths.test_summary_file(epoch, snr)
-            )
-            for snr in snr_values
-        )
+        missing_files = []
+
+        for snr in snr_values:
+            expected_files = [
+                paths.test_summary_file(epoch, snr),
+                paths.test_probability_file(epoch, snr),
+                paths.test_strength_file(epoch, snr),
+                paths.test_probability_plot(epoch, snr),
+                paths.test_strength_plot(epoch, snr),
+                paths.test_success_plot(epoch, snr),
+            ]
+
+            missing_for_snr = [f for f in expected_files if not os.path.exists(f)]
+
+            if missing_for_snr:
+                print(f"[TEST] epoch {epoch}, snr {snr}: missing {len(missing_for_snr)} files")
+                for f in missing_for_snr:
+                    print(f"[TEST] missing: {f}")
+
+                missing_files.extend(missing_for_snr)
+
+        if missing_files:
+            return False
+
+        return True
 
     def test(
         self, 
@@ -68,6 +87,7 @@ class Test:
         @policy_network: the DQN policy network to use for testing (if mode includes DQN)
         @policy_ql: the Q-Learning policy to use for testing (if mode includes QL)
         """
+        print(f"[TEST] ENTER test(): epoch={epoch}, mode={mode}")
         n_ex = 500 # Number of times we simulate the channel for each SNR
         T = 10     # Time steps for the evolution of the channel
         
@@ -209,7 +229,7 @@ class Test:
     ):
         """ Internal helper to keep the main loop clean. 
         """
-        
+        print(f"[TEST] ENTER _save_and_plot(): epoch={epoch}, SNR={SNR}")
         # Save .dat files
         pd.DataFrame(
             {"Epoch": epoch, "AvgLenPath": avg_len_path}, 
@@ -287,16 +307,22 @@ class Test:
                 if f.endswith('_eval.pth')
             ]
 
+            print(f"[TEST] Found {len(dqn_files)} DQN checkpoints in {checkpoints_dir_dql}")
+
             # Sort name of files by epoch number
             dqn_files.sort(key=lambda x: int(x.split('_')[1]))
 
             for f in dqn_files:
                 # Extract epoch number from filename (assuming format 'checkpoint_epoch_eval.pth')
                 epoch = int(f.split('_')[1])
+
+                print(f"[TEST] considering checkpoint file = {f}")
+                print(f"[TEST] extracted epoch = {epoch}")
                 
                 if epoch % self.parameters.test_freq != 0:
                     continue
 
+                print(f"[TEST] checking if epoch {epoch} already tested")
                 if self._epoch_already_tested(
                     paths, 
                     epoch, 
@@ -309,6 +335,7 @@ class Test:
 
                 device = next(self.DQN.evaluation_q_network.parameters()).device
                 checkpoint_path = os.path.join(checkpoints_dir_dql, f)
+                print(f"[TEST] loading checkpoint: {checkpoint_path}")
 
                 try:
                     state_dict = torch.load(checkpoint_path, map_location=device)
@@ -333,7 +360,8 @@ class Test:
                         
                     except FileNotFoundError:
                         policy_ql = None
-                        
+                
+                print(f"[TEST] launching test() for epoch {epoch}")
                 self.test(
                     testing_objects_dict, 
                     epoch, 
@@ -350,12 +378,17 @@ class Test:
                 and f.endswith('.csv')
             ]
 
+            print(f"[TEST] Found {len(ql_files)} QL checkpoints in {checkpoints_dir_ql}")
+
             # Sort name of files by episode (epoch) number (assuming format 'policy_after_X_episodes.csv')
             ql_files.sort(key=lambda x: int(x.split('_')[2].replace('episodes.csv','')))
 
             for f in ql_files:
 
                 epoch = int(f.split('_')[2].replace('episodes.csv',''))
+
+                print(f"[TEST] considering checkpoint file = {f}")
+                print(f"[TEST] extracted epoch = {epoch}")
 
                 if epoch % self.parameters.test_freq == 0:
 
@@ -364,6 +397,7 @@ class Test:
                         episode = epoch
                     )
 
+                    print(f"[TEST] launching test() for epoch {epoch}")
                     self.test(
                         testing_objects_dict, 
                         epoch, 

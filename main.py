@@ -43,7 +43,7 @@ def main():
             exp_seed = base_seed + 1000*i + j
             set_seed(exp_seed)
             print("="*80)
-            print(f"[INFO] Starting simulation for codebooks {codebook_specs} with Δ={delta}")
+            print(f"[INFO] Starting simulation for codebooks {codebook_specs} with delta = {delta}")
             print("="*80)
 
             parameters = Parameters(    
@@ -61,8 +61,8 @@ def main():
                 codebook_specs = codebook_specs,
 
                 SNR = 10,
-                snr_values = [0,5,10,20],
-                # snr_values = [20],
+                # snr_values = [0,5,10,20],
+                snr_values = [20],
                 type_channel = "half-spaced ULAs",
                 type_modulation = "BPSK", 
                 mean_noise = 0,
@@ -93,13 +93,13 @@ def main():
                 replay_buffer_memory_size = 120000,
 
                 # n_epochs=10000,
-                n_epochs = 10,
+                n_epochs = 1,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
                 # n_episodes = 10000,
-                n_episodes = 10,
+                n_episodes = 1,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -124,7 +124,7 @@ def main():
                 recover_checkpoint_path = "./Data/Example_34",
 
                 enable_async_eval = True,
-                async_eval_poll_seconds = 30,
+                async_eval_poll_seconds = 10,
                 async_eval_device = "cpu",
                 
                 precision = 2,  
@@ -178,6 +178,8 @@ def main():
             # Async evaluation process handle (background tester) and its stop signal
             async_process = None
             stop_event = None
+            dqn_agent, dqn_policy = None, None
+            training_error = None
 
             try:
                 # Start background evaluation only if async eval is enabled
@@ -187,28 +189,46 @@ def main():
                     # Launch the background evaluation worker
                     # It watches saved checkpoints and tests them while training continues
                     stop_event, async_process = start_async_eval_worker(
-                        parameters=parameters,
-                        experiment_root=store.paths.root,
-                        mode=mode,
-                        q_policy=q_policy
+                        parameters = parameters,
+                        experiment_root = store.paths.root,
+                        mode = mode,
+                        q_policy = q_policy
                     )
 
                 # Train Deep Q-Learning and get the policy
                 dqn_out = runner.run_deep_q_learning()
-                if dqn_out is None:
-                    dqn_agent, dqn_policy = None, None
-                else:
+                if dqn_out is not None:
                     dqn_agent, dqn_policy = dqn_out
+            
+            except Exception as e:
+                training_error = e
+                print(f"[ERROR] Training failed before final testing: {e}")
 
             finally:
                 # Make sure the background evaluator is stopped cleanly,
                 # even if training crashes or is interrupted
                 if async_process is not None:
+                    print("[MAIN] stopping async worker...")
                     stop_event.set()
-                    async_process.join()
-                        
-            runner.run_testing(q_policy, dqn_agent, dqn_policy)
 
+                    print("[MAIN] waiting up to 10s for async worker...")
+                    async_process.join(timeout=10)
+
+                    if async_process.is_alive():
+                        print("[MAIN] async worker still busy -> terminating it.")
+                        async_process.terminate()
+                        async_process.join()
+
+                    print("[MAIN] async worker joined.")
+                        
+            try:
+                runner.run_testing(q_policy, dqn_agent, dqn_policy)
+            except Exception as e:
+                print(f"[ERROR] Final testing failed: {e}")
+
+            if training_error is not None:
+                raise training_error
+            
             print(f"[INFO] Simulation for Example_{paths.root.split('_')[-1]} Completed.")
 
 if __name__ == "__main__":

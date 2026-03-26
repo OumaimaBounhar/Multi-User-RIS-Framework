@@ -70,25 +70,40 @@ def async_eval_worker(
 
     print(f"[ASYNC-EVAL] Worker started for {experiment_root} in mode={mode}")
 
-    while not stop_event.is_set():
+    loop_id = 0
+
+    while True:
+        if stop_event.is_set():
+            print(f"[ASYNC-EVAL] stop_event detected before polling loop {loop_id}")
+            break
+
+        print(f"[ASYNC-EVAL] ENTER run_model_tests() | loop={loop_id}")
         tester.run_model_tests(
             testing_objects_dict=testing_objects_dict,
             checkpoints_dir_ql=store.paths.q_matrices_dir,
             checkpoints_dir_dql=store.paths.dqn_checkpoints_dir,
             mode=mode
         )
-        time.sleep(params_eval.async_eval_poll_seconds)
+        print(f"[ASYNC-EVAL] LEFT run_model_tests() | loop={loop_id}")
 
-    # Final sweep before exit
+        if stop_event.is_set():
+            print(f"[ASYNC-EVAL] stop_event detected after run_model_tests() | loop={loop_id}")
+            break
+
+        print(f"[ASYNC-EVAL] sleeping {params_eval.async_eval_poll_seconds}s before next poll")
+        time.sleep(params_eval.async_eval_poll_seconds)
+        loop_id += 1
+
+    print("[ASYNC-EVAL] ENTER final sweep before exit")
     tester.run_model_tests(
         testing_objects_dict=testing_objects_dict,
         checkpoints_dir_ql=store.paths.q_matrices_dir,
         checkpoints_dir_dql=store.paths.dqn_checkpoints_dir,
         mode=mode
     )
+    print("[ASYNC-EVAL] LEFT final sweep before exit")
 
-    print("[ASYNC-EVAL] Worker stopped")
-
+    print("[ASYNC-EVAL] Worker exiting")
 
 def start_async_eval_worker(
     parameters,
@@ -99,9 +114,10 @@ def start_async_eval_worker(
     stop_event = mp.Event()
 
     process = mp.Process(
-        target=async_eval_worker,
-        args=(parameters, experiment_root, mode, stop_event, q_policy),
-        daemon=True
+        target = async_eval_worker,
+        args = (parameters, experiment_root, mode, stop_event, q_policy),
+        # daemon=True
+        daemon = False
     )
     process.start()
 
