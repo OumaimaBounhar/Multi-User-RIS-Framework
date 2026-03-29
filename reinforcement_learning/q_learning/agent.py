@@ -269,7 +269,15 @@ class QLearningAgent():
         all_len_path = []
         
         for _ in range(self.n_channels_train):
-                        
+            
+            """ ---------------------Modification during last test----------------------- """
+            ## Start at the initial state
+            current_state_index = 0 
+        
+            ## Set the prior at the initial state
+            self.environment.reset_prior()
+            """ ------------------------------------------------------------------------- """
+            
             # Length of the path metric to measure Policy efficiency
             length_path = 0 
             
@@ -282,13 +290,6 @@ class QLearningAgent():
         
             for _ in range(self.n_time_steps):
 
-                """ ---------------------Modification during last test----------------------- """
-                ## Start at the initial state
-                current_state_index = 0 
-            
-                ## Set the prior at the initial state
-                self.environment.reset_prior()
-                """ ------------------------------------------------------------------------- """
                 
                 for _ in range(self.max_len_path):
 

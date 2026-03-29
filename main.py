@@ -22,26 +22,25 @@ def main():
                                 CodebookSpec(kind="narrow", N=8),
                                 CodebookSpec(kind="hierarchical", K=3, M=2)
                             ],
-                        #     [
-                        #         CodebookSpec(kind="narrow", N=16),
-                        #         CodebookSpec(kind="hierarchical", K=4, M=2)
-                        #     ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=16),
+                            #     CodebookSpec(kind="hierarchical", K=4, M=2)
+                            # ],
                         ]
 
     delta_values = [
-                    1e-1, # session DQL Example_6 , 29
-                    2e-1,
-                    3e-1,
-                    # 1e-2, # session dql Example_5 , 30, 39, 40
-                    2e-2,
+                    # 1e-1, # session DQL Example_6 , 29
+                    # 2e-1,
+                    # 3e-1,
+                    1e-2, # session dql Example_5 , 30, 39, 40
+                    # 2e-2,
                     ]
 
     base_seed = 42
 
     for i, (size_codebooks, codebook_specs) in enumerate(zip(all_size_of_codebooks, all_codebook_specs)):
         for j, delta in enumerate(delta_values):
-            exp_seed = base_seed + 1000*i + j
-            set_seed(exp_seed)
+            set_seed(base_seed)
             print("="*80)
             print(f"[INFO] Starting simulation for codebooks {codebook_specs} with delta = {delta}")
             print("="*80)
@@ -49,7 +48,7 @@ def main():
             parameters = Parameters(    
                 experiment_note = (
                     "Hierarchical baseline tested with noiseless pilot measurements for sanity check."
-                    f"Codebook {size_codebooks} used. Delta at {delta}. Tau at 0.005."
+                    f"Codebook {size_codebooks} used. Delta at {delta}. Tau at 0.001."
                 ),
                 experiment_seed = exp_seed,
 
@@ -93,13 +92,13 @@ def main():
                 replay_buffer_memory_size = 120000,
 
                 # n_epochs=10000,
-                n_epochs = 1,
+                n_epochs = 10,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
                 # n_episodes = 10000,
-                n_episodes = 1,
+                n_episodes = 10,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -109,14 +108,14 @@ def main():
                 max_norm = 0.5,
                 do_gradient_clipping = True,
                 
-                tau = 0.005,
+                tau = 0.001,
                 freq_update_target = 100,
                 targetNet_update_method = "soft",
                 
                 Train_Deep_Q_Learning = True,
                 Train_Q_Learning = True,
                 # saving_freq = 500,
-                saving_freq = 1,
+                saving_freq = 2,
                 test_freq = 1,
                 # test_freq = 500,
 

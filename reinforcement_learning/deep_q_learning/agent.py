@@ -213,7 +213,14 @@ class DeepQLearningAgent():
         #---------------------------------------- Loop over channel realizations --------------------------------------------------
 
         for _ in range(self.n_channels_train):
-                                
+                """ -----------------------------Modification during last test-------------------------------------------- """
+                ## Always start from the initial state
+                current_state = self.environment.state_space.get_state_from_index(0) 
+                
+                ## Set the prior at the initial state
+                self.environment.reset_prior()
+                """ ------------------------------------------------------------------------- """
+
                 # Training : Pick a random channel from dataset
                 index_class_channel = np.random.randint(0,len(self.dataset_train)) # Random class
                 index_specific_channel = np.random.randint(0,len((self.dataset_train)[index_class_channel][1])) # Random channel from this class
@@ -224,13 +231,6 @@ class DeepQLearningAgent():
 
                 for _ in range(self.n_time_steps):
                     
-                    """ -----------------------------Modification during last test-------------------------------------------- """
-                    ## Always start from the initial state
-                    current_state = self.environment.state_space.get_state_from_index(0) 
-                    
-                    ## Set the prior at the initial state
-                    self.environment.reset_prior()
-                    """ ------------------------------------------------------------------------- """
                     ## Track path length as number of actions are taken to measure how efficient the policy is
                     path_len = 0
                     episode_reward = 0.0

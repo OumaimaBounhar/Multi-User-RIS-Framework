@@ -49,8 +49,12 @@ class Test:
                 paths.test_summary_file(epoch, snr),
                 paths.test_probability_file(epoch, snr),
                 paths.test_strength_file(epoch, snr),
+                paths.test_strength_success_file(epoch, snr),
+                paths.test_strength_failure_file(epoch, snr),
                 paths.test_probability_plot(epoch, snr),
                 paths.test_strength_plot(epoch, snr),
+                paths.test_strength_success_plot(epoch, snr),
+                paths.test_strength_failure_plot(epoch, snr),
                 paths.test_success_plot(epoch, snr),
             ]
 
@@ -78,7 +82,7 @@ class Test:
     ):
         """
         Core simulation engine. Saves results to disk and generates plots
-
+        
         Args:
         @testing_objects_dict: dict containing all necessary objects for testing (channel, feedback, etc.)
         @epoch: current epoch number for logging
@@ -86,6 +90,11 @@ class Test:
         tests baselines + QL), or 'both' (tests all).
         @policy_network: the DQN policy network to use for testing (if mode includes DQN)
         @policy_ql: the Q-Learning policy to use for testing (if mode includes QL)
+
+        Metrics computed:
+        - correct_class: probability of selecting the true optimal codeword
+        - normalized_power_all: average (RSE_selected / RSE_opt) over all runs
+        - normalized_power_on_success: average (RSE_selected / RSE_opt) only on successful runs
         """
         print(f"[TEST] ENTER test(): epoch={epoch}, mode={mode}")
         n_ex = 500 # Number of times we simulate the channel for each SNR
@@ -125,17 +134,34 @@ class Test:
                 policy_ql if policy_ql else objs["Policy_Q"], 
                 policy_network
             )
+            n_methods = len(label)
+
+            correct_class = np.zeros((T, n_methods), dtype=float)
+
+            # Average normalized power over ALL runs
+            normalized_power_all = np.zeros((T, n_methods), dtype=float)
+
+            # Sum of normalized power only when success happens
+            normalized_power_success_sum = np.zeros((T, n_methods), dtype=float)
+            # Number of successes per time t and per method
+            success_counts_per_t = np.zeros((T, n_methods), dtype=float)
+
+            # Sum of normalized power only when failure happens
+            normalized_power_failure_sum = np.zeros((T, n_methods), dtype=float)
+            # Number of failures per time t and per method
+            failure_counts_per_t = np.zeros((T, n_methods), dtype=float)
             
-            correct_class = np.zeros((T, len(label)))
-            relative_strength = np.zeros((T, len(label)))
-            all_len_path_per_SNR = [] # List to store lengths of paths during testing per SNR
-            successful_episodes_per_epoch = [] # List to store number of successful episodes per epoch
+            # List to store number of successful episodes per epoch
+            successful_episodes_per_epoch = [] 
             total_successful_episodes = 0 # To count successful simulations
+
+            # List to store lengths of paths during testing per SNR
+            all_len_path_per_SNR = [] 
             
             print(f'[INFO] Testing Mode: {mode} | SNR: {SNR} | Epoch: {epoch} | Std Noise: {self.parameters.std_noise}')
             
             # Reseed to ensure reproducible test conditions
-            set_seed(42 + SNR + epoch)
+            set_seed(42)
 
             for _ in tqdm(range(n_ex)):
                 objs["channel"].new_channel() # New channel
@@ -167,15 +193,34 @@ class Test:
                         indices.extend([methods.deep_q_learning_sampling(), methods.q_learning_sampling()])
                     
                     # Calculate metrics to measure performance of each method
-                    correct_class[t] += [idx == opt_idx_cd for idx in indices]
-                    
-                    ## Later proposition --- Modify to compute relative strength for each method compared to the optimal codeword
-                    # correct_class[t] = correct_class[t] + [feedback.transmit(index) == index_optimal_cd for index in list_algorithms_class]
-                    
                     for i, idx in enumerate(indices):
+                        is_success = (idx == opt_idx_cd)
+
+                        if is_success:
+                            correct_class[t, i] += 1.0
+                            success_counts_per_t[t, i] += 1.0
+                        else:
+                            failure_counts_per_t[t, i] += 1.0
+
                         objs["feedback"].transmit(idx, codebook_used=0)
-                        rse = objs["feedback"].get_feedback(noise=False)
-                        relative_strength[t][i] += (rse / RSE_opt)
+                        rse_selected  = objs["feedback"].get_feedback(noise=False)
+
+                        normalized_ratio = rse_selected / RSE_opt if RSE_opt > 0 else 0.0
+
+                        if is_success and not np.isclose(normalized_ratio, 1.0, atol=1e-8):
+                            print(
+                                f"[DEBUG] success but normalized_ratio={normalized_ratio:.12f}, "
+                                f"idx={idx}, opt_idx_cd={opt_idx_cd}"
+                            )
+
+                        # Unconditional average power ratio
+                        normalized_power_all[t, i] += normalized_ratio
+
+                        # Conditional average power ratio on successful detections only
+                        if is_success:
+                            normalized_power_success_sum[t, i] += normalized_ratio
+                        else:
+                            normalized_power_failure_sum[t, i] += normalized_ratio
                     
                     # Track success (using the relevant agent for the current test)
                     # Track success for the "primary" agent in the test
@@ -195,9 +240,23 @@ class Test:
 
             # Averaging
             avg_len_path = np.mean(all_len_path_per_SNR)
+            # Convert counts to probabilities / averages
             correct_class /= n_ex
-            relative_strength /= n_ex
+            normalized_power_all /= n_ex
+
+            normalized_power_on_success = np.divide(
+                normalized_power_success_sum,
+                success_counts_per_t,
+                out=np.full_like(normalized_power_success_sum, np.nan),
+                where=success_counts_per_t > 0
+            )
             
+            normalized_power_on_failure = np.divide(
+                normalized_power_failure_sum,
+                failure_counts_per_t,
+                out=np.full_like(normalized_power_failure_sum, np.nan),
+                where=failure_counts_per_t > 0
+            )
             # Process and Save Statistics
             self._save_and_plot(
                 paths, 
@@ -206,7 +265,9 @@ class Test:
                 label, 
                 T, 
                 correct_class, 
-                relative_strength, 
+                normalized_power_all,
+                normalized_power_on_success,
+                normalized_power_on_failure,
                 successful_episodes_per_epoch, 
                 avg_len_path, 
                 total_successful_episodes, 
@@ -221,13 +282,15 @@ class Test:
         label, 
         T, 
         correct_class, 
-        relative_strength, 
+        normalized_power_all, 
+        normalized_power_on_success, 
+        normalized_power_on_failure,
         successful_episodes_per_epoch, 
         avg_len_path, 
         total_successful_episodes, 
         n_ex
     ):
-        """ Internal helper to keep the main loop clean. 
+        """ Internal helper to save statistics and generate plots.
         """
         print(f"[TEST] ENTER _save_and_plot(): epoch={epoch}, SNR={SNR}")
         # Save .dat files
@@ -246,38 +309,95 @@ class Test:
         )
 
         pd.DataFrame(
-            relative_strength, 
-            columns=label).to_csv(
+            normalized_power_all, 
+            columns=label
+        ).to_csv(
             paths.test_strength_file(epoch, SNR), 
             index=False
         )
 
-        # 1. Probability Plot
+        # Conditional normalized power on success
+        pd.DataFrame(
+            normalized_power_on_success,
+            columns=label
+        ).to_csv(
+            paths.test_strength_success_file(epoch, SNR),
+            index=False
+        )
+
+        # Conditional normalized power on failure
+        pd.DataFrame(
+            normalized_power_on_failure,
+            columns=label
+        ).to_csv(
+            paths.test_strength_failure_file(epoch, SNR),
+            index=False
+        )
+
+        # 1. Success probability plot
         plt.figure(figsize=(10, 6))
         plt.plot(np.arange(1, T + 1), correct_class, label=label)
         plt.legend()
-        plt.title(f'Probability of Finding the Best Codeword for Different Number of Pilots Sent at SNR = {SNR}')
+        plt.title(
+            f'Probability of Finding the Best Codeword vs Number of Pilots (SNR = {SNR})'
+        )
+        plt.xlabel('Number of pilots')
+        plt.ylabel('Success probability')
         plt.grid()
         plt.savefig(paths.test_probability_plot(epoch, SNR))
         plt.close()
-        
-        # 2. Strength Plot
+
+        # 2. Unconditional normalized power plot
         plt.figure(figsize=(10, 6))
-        plt.plot(np.arange(1, T + 1), relative_strength, label=label)
+        plt.plot(np.arange(1, T + 1), normalized_power_all, label=label)
         plt.legend()
-        plt.title(f'Strength for Different Number of Pilots Sent (SNR = {SNR})')
+        plt.title(
+            f'Average Normalized Power of Selected Beam (All Runs) at SNR = {SNR}'
+        )
+        plt.xlabel('Number of pilots')
+        plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$')
         plt.grid()
         plt.savefig(paths.test_strength_plot(epoch, SNR))
         plt.close()
 
-        # 3. Successful Episodes Plot
+        # 3. Conditional normalized power plot on success
         plt.figure(figsize=(10, 6))
-        plt.plot(range(1, len(successful_episodes_per_epoch) + 1), successful_episodes_per_epoch, color='b')
-        plt.xlabel('Epoch')
-        plt.ylabel('Number of Successful Episodes')
+        plt.plot(np.arange(1, T + 1), normalized_power_on_success, label=label)
+        plt.legend()
+        plt.title(
+            f'Average Normalized Power Conditioned on Success at SNR = {SNR}'
+        )
+        plt.xlabel('Number of pilots')
+        plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | success')
+        plt.grid()
+        plt.savefig(paths.test_strength_success_plot(epoch, SNR))
+        plt.close()
+
+        # 5. Conditional normalized power plot on failure
+        plt.figure(figsize=(10, 6))
+        plt.plot(np.arange(1, T + 1), normalized_power_on_failure, label=label)
+        plt.legend()
+        plt.title(
+            f'Average Normalized Power Conditioned on Failure at SNR = {SNR}'
+        )
+        plt.xlabel('Number of pilots')
+        plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | failure')
+        plt.grid()
+        plt.savefig(paths.test_strength_failure_plot(epoch, SNR))
+        plt.close()
+
+        # 6. Successful episodes plot
+        plt.figure(figsize=(10, 6))
+        plt.plot(
+            range(1, len(successful_episodes_per_epoch) + 1),
+            successful_episodes_per_epoch,
+            color='b'
+        )
+        plt.xlabel('Simulation index')
+        plt.ylabel('Cumulative successful episodes')
         plt.title(f'Number of Successful Episodes at epoch = {epoch} & SNR = {SNR}')
         plt.grid(True)
-        plt.savefig(paths.test_success_plot(epoch, SNR))        
+        plt.savefig(paths.test_success_plot(epoch, SNR))
         plt.close()
 
         print(f"[INFO] SNR {SNR}: Success Rate {(total_successful_episodes/n_ex)*100}% | Avg Path {avg_len_path}")

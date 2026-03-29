@@ -280,6 +280,18 @@ class ExperimentPaths:
             f"strength_epoch_{epoch}_snr_{snr}.dat"
         )
 
+    def test_strength_success_file(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strengths_dir,
+            f"strength_on_success_epoch_{epoch}_snr_{snr}.dat"
+        )
+    
+    def test_strength_failure_file(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strengths_dir,
+            f"strength_on_failure_epoch_{epoch}_snr_{snr}.dat"
+        )
+
     def test_probability_plot(self, epoch: int, snr: Union[int, float]) -> str:
         return os.path.join(
             self.test_probability_plots_dir,
@@ -292,11 +304,24 @@ class ExperimentPaths:
             f"Image_strength_epoch_{epoch}_snr_{snr}.png"
         )
 
+    def test_strength_success_plot(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strength_plots_dir,
+            f"Image_strength_on_success_epoch_{epoch}_snr_{snr}.png"
+        )
+
+    def test_strength_failure_plot(self, epoch: int, snr: Union[int, float]) -> str:
+        return os.path.join(
+            self.test_strength_plots_dir,
+            f"Image_strength_on_failure_epoch_{epoch}_snr_{snr}.png"
+        )
+    
     def test_success_plot(self, epoch: int, snr: Union[int, float]) -> str:
         return os.path.join(
             self.test_success_plots_dir,
             f"successful_episodes_epoch_{epoch}_snr_{snr}.png"
         )
+    
     # --------------------------- Noise files ---------------------------
     @property
     def noise_dir(self) -> str:
