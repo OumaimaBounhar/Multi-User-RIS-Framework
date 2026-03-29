@@ -53,14 +53,38 @@ class Methods:
         self.counter_exhaustive = 0 # Count the number of beams tested (we test all codeword of communications one after the other then starts again)
         self.list_exh = np.zeros(size_codebooks[0]) # Contains the RSE for the codewords tested for exhaustive search
 
+        # ### DFT Sequential Sampling ###
+        # self.prior_dft = np.ones(size_codebooks[0]) / size_codebooks[0]
+        # self.posterior_dft = np.ones(size_codebooks[0]) / size_codebooks[0]
+        # self.ordered_list_dft = np.argsort(self.prior_dft)[::-1]
+        # self.counter_dft = 0
+        # self.list_dft = []
+
+        ### DFT Sequential Sampling ###
+        self.prior_dft = np.ones(size_codebooks[0]) / size_codebooks[0]
+        self.posterior_dft = np.ones(size_codebooks[0]) / size_codebooks[0]
+        self.ordered_list_dft = np.argsort(self.prior_dft)[::-1]
+        # Number of pilots used in the current channel window
+        self.counter_dft_window = 0
+        # Global cursor over the DFT pilot codebook
+        self.cursor_dft = 0
+        # Samples collected within the current window only
+        self.list_dft = []
+
         ### Hierarchical ###
-        for _, spec in zip(size_codebooks, codebook_specs):
-            if spec.kind.lower() == "hierarchical":
-                self.K,self.M = spec.K, spec.M
+        self.K = None
+        self.M = None
         self.counter_hierarchical = 0 # Count the number of beams tested for hierarchical search (between 0 and K*M)
         self.argmax_hierarchical = 0
-        self.list_hierarchical = np.zeros(self.M) # contains the M elements tested to compare them and select the next branch
-        self.hierarchical_best_beam = r.randint(0,size_codebooks[0]-1) # the best beam found by the hierarchical search, initialized randomly
+        self.list_hierarchical = None  # contains the M elements tested to compare them and select the next branch
+        self.hierarchical_best_beam = r.randint(0, size_codebooks[0] - 1) # the best beam found by the hierarchical search, initialized randomly
+
+        for spec in codebook_specs:
+            if spec.kind.lower() == "hierarchical":
+                self.K = spec.K
+                self.M = spec.M
+                self.list_hierarchical = np.zeros(self.M)
+                break
 
         ### Random Sampling ###
         self.prior_random = np.ones(size_codebooks[0])/size_codebooks[0] # The prior for the random sampling method
@@ -112,6 +136,99 @@ class Methods:
         self.counter_exhaustive = count
         return argmax_RSE
     
+    # def dft_sampling(
+    #     self
+    # ) -> int:
+    #     """
+    #     Sequential DFT pilot sweep baseline:
+    #     test pilot beams deterministically in order 0,1,2,... and update posterior.
+    #     """
+    #     size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
+    #     pilot_kind = codebook_specs[1].kind.lower()
+
+    #     if pilot_kind != "dft":
+    #         raise RuntimeError(
+    #             "[ERROR] dft_sampling() was called but pilot codebook is not DFT."
+    #         )
+
+    #     prior = self.prior_dft
+    #     ordered_list = self.ordered_list_dft
+    #     counter = self.counter_dft
+    #     samples = self.list_dft
+
+    #     index_codeword_tested = counter % size_codebooks[1]
+
+    #     self.feedback.transmit(index_codeword_tested, codebook_used=1)
+    #     rse = self.feedback.get_feedback(noise=True)
+    #     samples.append((rse, index_codeword_tested))
+    #     self.list_dft = samples
+
+    #     prior, ordered_list = self.probability.update(prior, ordered_list, samples)
+    #     self.posterior_dft = prior
+    #     self.ordered_list_dft = ordered_list
+
+    #     best_codeword = ordered_list[0]
+
+    #     counter += 1
+    #     self.counter_dft = counter
+
+    #     if counter == self.len_window_channel:
+    #         prior, ordered_list = self.probability.update_proba_channel(prior)
+    #         self.prior_dft = prior
+    #         self.ordered_list_dft = ordered_list
+    #         self.counter_dft = 0
+    #         self.list_dft = []
+
+    #     return best_codeword
+
+    def dft_sampling(self) -> int:
+        """
+        Sequential DFT pilot sweep baseline.
+
+        The posterior is updated using only the samples collected in the
+        current channel window, but the DFT pilot index continues across
+        windows instead of restarting from 0 every time.
+        """
+        size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
+        pilot_kind = codebook_specs[1].kind.lower()
+
+        if pilot_kind != "dft":
+            raise RuntimeError(
+                "[ERROR] dft_sampling() was called but pilot codebook is not DFT."
+            )
+
+        prior = self.prior_dft
+        ordered_list = self.ordered_list_dft
+        samples = self.list_dft
+
+        # Continue the DFT sweep globally across windows
+        index_codeword_tested = self.cursor_dft % size_codebooks[1]
+
+        self.feedback.transmit(index_codeword_tested, codebook_used=1)
+        rse = self.feedback.get_feedback(noise=True)
+        samples.append((rse, index_codeword_tested))
+        self.list_dft = samples
+
+        prior, ordered_list = self.probability.update(prior, ordered_list, samples)
+        self.posterior_dft = prior
+        self.ordered_list_dft = ordered_list
+
+        best_codeword = ordered_list[0]
+
+        # Advance both counters
+        self.cursor_dft += 1
+        self.counter_dft_window += 1
+
+        # End of local channel window: refresh prior, clear only local samples
+        if self.counter_dft_window == self.len_window_channel:
+            prior, ordered_list = self.probability.update_proba_channel(prior)
+            self.prior_dft = prior
+            self.ordered_list_dft = ordered_list
+            self.counter_dft_window = 0
+            self.list_dft = []
+
+        return best_codeword
+    
     def hierarchical(self, noisy_measurement: bool = True)->int:
         """
         Hierarchical search.
@@ -124,6 +241,11 @@ class Methods:
         Returns:
         @ hierarchical_best_beam: current best communication beam found
         """
+        if self.K is None or self.M is None or self.list_hierarchical is None:
+            raise RuntimeError(
+                "[ERROR] hierarchical() was called but no hierarchical pilot codebook is configured."
+            )
+    
         count = self.counter_hierarchical # Keeps track of how many codewords have been tested so far
         K_hier, M_hier = self.K,self.M # K = total levels, M = number of branches per level
         argmax_hier = self.argmax_hierarchical # Stores the best subgroup found so far

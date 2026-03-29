@@ -18,14 +18,22 @@ def main():
                             ]
 
     all_codebook_specs = [
-                            [
-                                CodebookSpec(kind="narrow", N=8),
-                                CodebookSpec(kind="hierarchical", K=3, M=2)
-                            ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=8),
+                            #     CodebookSpec(kind="hierarchical", K=3, M=2)
+                            # ],
                             # [
                             #     CodebookSpec(kind="narrow", N=16),
                             #     CodebookSpec(kind="hierarchical", K=4, M=2)
                             # ],
+                            [
+                                CodebookSpec(kind="narrow", N=8),
+                                CodebookSpec(kind="dft", N=14)
+                            ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=16),
+                            #     CodebookSpec(kind="dft", N=30)
+                            # ]
                         ]
 
     delta_values = [
@@ -40,6 +48,8 @@ def main():
 
     for i, (size_codebooks, codebook_specs) in enumerate(zip(all_size_of_codebooks, all_codebook_specs)):
         for j, delta in enumerate(delta_values):
+            comm_kind = codebook_specs[0].kind
+            pilot_kind = codebook_specs[1].kind
             set_seed(base_seed)
             print("="*80)
             print(f"[INFO] Starting simulation for codebooks {codebook_specs} with delta = {delta}")
@@ -47,10 +57,12 @@ def main():
 
             parameters = Parameters(    
                 experiment_note = (
-                    "Hierarchical baseline tested with noiseless pilot measurements for sanity check."
-                    f"Codebook {size_codebooks} used. Delta at {delta}. Tau at 0.001."
+                    # "Hierarchical baseline tested with noisy pilot measurements."
+                    f"Communication codebook = {comm_kind} ({size_codebooks[0]} codewords). "
+                    f"Pilot codebook = {pilot_kind} ({size_codebooks[1]} codewords)."
+                    f"Delta = {delta}. Tau = 0.001."
                 ),
-                experiment_seed = exp_seed,
+                experiment_seed = base_seed,
 
                 N_R = 64, 
                 N_T = 1, 
@@ -127,7 +139,9 @@ def main():
                 async_eval_device = "cpu",
                 
                 precision = 2,  
-                len_window_channel = 10,
+                # len_window_channel = 10,
+                len_window_channel = 14,
+                # len_window_channel = 30,
                 modification_channel = 0,
                 min_representatives_q_learning_train = 100,
                 min_representatives_q_learning_test = 10

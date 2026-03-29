@@ -36,6 +36,84 @@ class Test:
         self.probability = probability
         self.DQN = DQN
     
+    def _build_method_specs(
+        self, 
+        methods, 
+        mode
+    ):
+        """
+        Returns a list of dicts:
+        {
+            "label": str,
+            "run": callable,
+            "track_success": bool
+        }
+        """
+        _, codebook_specs = self.parameters.get_codebook_parameters()
+        pilot_kind = codebook_specs[1].kind.lower()
+
+        specs = []
+
+        # Always available
+        specs.append({
+            "label": "Exhaustive",
+            "run": methods.exhaustive,
+            "track_success": False,
+        })
+
+        # Only include hierarchical search when the pilot codebook is hierarchical
+        if pilot_kind == "hierarchical":
+            specs.append({
+                "label": "Hierarchical",
+                "run": lambda: methods.hierarchical(
+                    noisy_measurement=self.parameters.hierarchical_noisy_measurement
+                ),
+                "track_success": False,
+            })
+
+        # If later you implement a DFT-specific baseline, put it here
+        elif pilot_kind == "dft":
+            specs.append({
+                "label": "DFT sampling",
+                "run": methods.dft_sampling,
+                "track_success": False,
+            })
+
+        # Always available
+        specs.append({
+            "label": "Random sampling",
+            "run": methods.random_sampling,
+            "track_success": False,
+        })
+
+        if mode == "dqn":
+            specs.append({
+                "label": "Deep Q-Learning",
+                "run": methods.deep_q_learning_sampling,
+                "track_success": True,
+            })
+
+        elif mode == "ql":
+            specs.append({
+                "label": "Q-Learning",
+                "run": methods.q_learning_sampling,
+                "track_success": True,
+            })
+
+        else:  # both
+            specs.append({
+                "label": "Deep Q-Learning",
+                "run": methods.deep_q_learning_sampling,
+                "track_success": True,
+            })
+            specs.append({
+                "label": "Q-Learning",
+                "run": methods.q_learning_sampling,
+                "track_success": False,
+            })
+
+        return specs
+
     def _epoch_already_tested(
         self,
         paths,
@@ -103,16 +181,6 @@ class Test:
         objs = testing_objects_dict
         paths = objs["paths"]
 
-        # Methods to compare
-        # Define labels based on the selected mode
-        baselines = ["Exhaustive", "Hierarchical", "Random sampling"]
-        if mode == 'dqn':
-            label = baselines + ["Deep Q-Learning"]
-        elif mode == 'ql':
-            label = baselines + ["Q-Learning"]
-        else: # both
-            label = baselines + ["Deep Q-Learning", "Q-Learning"]
-
         # Loop over all SNR values
         for SNR in objs["snr_values"]:
             # Ensure channel noise parameters is updated based on each SNR
@@ -134,7 +202,16 @@ class Test:
                 policy_ql if policy_ql else objs["Policy_Q"], 
                 policy_network
             )
+            
+            # Define labels based on the selected mode
+            method_specs = self._build_method_specs(methods, mode)
+            label = [spec["label"] for spec in method_specs]
             n_methods = len(label)
+
+            primary_method_idx = next(
+                (i for i, spec in enumerate(method_specs) if spec["track_success"]),
+                None
+            )
 
             correct_class = np.zeros((T, n_methods), dtype=float)
 
@@ -175,23 +252,8 @@ class Test:
                     RSE_opt = objs["feedback"].get_feedback(noise=False)
             
                     # Collect indices based on mode
-                    indices = [
-                        methods.exhaustive(), 
-                        methods.hierarchical(
-                            noisy_measurement=self.parameters.hierarchical_noisy_measurement
-                        ), 
-                        methods.random_sampling()
-                        ]
-                    
-                    if mode == 'dqn':
-                        indices.append(methods.deep_q_learning_sampling())
-
-                    elif mode == 'ql':
-                        indices.append(methods.q_learning_sampling())
-
-                    else: # both
-                        indices.extend([methods.deep_q_learning_sampling(), methods.q_learning_sampling()])
-                    
+                    indices = [spec["run"]() for spec in method_specs]
+                                    
                     # Calculate metrics to measure performance of each method
                     for i, idx in enumerate(indices):
                         is_success = (idx == opt_idx_cd)
@@ -223,10 +285,11 @@ class Test:
                             normalized_power_failure_sum[t, i] += normalized_ratio
                     
                     # Track success (using the relevant agent for the current test)
-                    # Track success for the "primary" agent in the test
-                    # E.g., for 'both', it tracks DQN (index 3) and QL (index 4)
-                    success_check_idx = 3
-                    if indices[success_check_idx] == opt_idx_cd and not successful_episode:
+                    if (
+                    primary_method_idx is not None
+                    and indices[primary_method_idx] == opt_idx_cd
+                    and not successful_episode
+                    ):
                         successful_episode = True
                         total_len_path = t
                         
@@ -293,6 +356,14 @@ class Test:
         """ Internal helper to save statistics and generate plots.
         """
         print(f"[TEST] ENTER _save_and_plot(): epoch={epoch}, SNR={SNR}")
+
+        size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
+        comm_kind = codebook_specs[0].kind
+        pilot_kind = codebook_specs[1].kind
+
+        comm_size = size_codebooks[0]
+        pilot_size = size_codebooks[1]
+
         # Save .dat files
         pd.DataFrame(
             {"Epoch": epoch, "AvgLenPath": avg_len_path}, 
@@ -339,7 +410,8 @@ class Test:
         plt.plot(np.arange(1, T + 1), correct_class, label=label)
         plt.legend()
         plt.title(
-            f'Probability of Finding the Best Codeword vs Number of Pilots (SNR = {SNR})'
+            f'Success Probability of Finding the Best Codeword vs Number of Pilots\n'
+            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
         )
         plt.xlabel('Number of pilots')
         plt.ylabel('Success probability')
@@ -352,7 +424,8 @@ class Test:
         plt.plot(np.arange(1, T + 1), normalized_power_all, label=label)
         plt.legend()
         plt.title(
-            f'Average Normalized Power of Selected Beam (All Runs) at SNR = {SNR}'
+            f'Average Normalized Power (All Runs)\n'
+            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
         )
         plt.xlabel('Number of pilots')
         plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$')
@@ -365,7 +438,8 @@ class Test:
         plt.plot(np.arange(1, T + 1), normalized_power_on_success, label=label)
         plt.legend()
         plt.title(
-            f'Average Normalized Power Conditioned on Success at SNR = {SNR}'
+            f'Average Normalized Power Conditioned on Success\n'
+            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
         )
         plt.xlabel('Number of pilots')
         plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | success')
@@ -378,7 +452,8 @@ class Test:
         plt.plot(np.arange(1, T + 1), normalized_power_on_failure, label=label)
         plt.legend()
         plt.title(
-            f'Average Normalized Power Conditioned on Failure at SNR = {SNR}'
+            f'Average Normalized Power Conditioned on Failure\n'
+            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
         )
         plt.xlabel('Number of pilots')
         plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | failure')
@@ -395,7 +470,10 @@ class Test:
         )
         plt.xlabel('Simulation index')
         plt.ylabel('Cumulative successful episodes')
-        plt.title(f'Number of Successful Episodes at epoch = {epoch} & SNR = {SNR}')
+        plt.title(
+            f'Number of Successful Episodes\n'
+            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
+        )
         plt.grid(True)
         plt.savefig(paths.test_success_plot(epoch, SNR))
         plt.close()
