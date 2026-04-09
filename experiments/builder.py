@@ -62,14 +62,22 @@ class ExperimentBuilder:
             signal
             ) 
 
+        # Dataset mode 
         if dataset_mode is None:
-            dataset_mode = (
-                DatasetMode.REUSE
-                if self.parameters.continue_training
-                else DatasetMode.GENERATE
-            )
+            if self.parameters.use_sionna_dataset:
+                if not self.parameters.sionna_dataset_pickle_path:
+                    raise ValueError(
+                        "use_sionna_dataset=True but sionna_dataset_pickle_path is not set."
+                    )
+                dataset_mode = DatasetMode.IMPORT_SIONNA
+            else:
+                dataset_mode = (
+                    DatasetMode.REUSE
+                    if self.parameters.continue_training
+                    else DatasetMode.GENERATE
+                )
 
-        # Generate dataset
+        # Generate/import dataset
         dataset_factory = DatasetFactory()
         dataset_proba = dataset_factory.get_dataset(
             dataset_mode = dataset_mode, 

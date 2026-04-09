@@ -46,7 +46,7 @@ class Dataset_probability:
         size_codebooks = (self.parameters.get_codebook_parameters())[0]
         
         # Initialize storage for representative classes
-        List_Representant_Classes = [[[],[]] for k in range(0,size_codebooks[0])]
+        List_Representant_Classes = [[[],[]] for _ in range(0,size_codebooks[0])]
         
         n_samples = 0
         

@@ -36,6 +36,9 @@ class Parameters :
                     sigma_alpha = 0, 
                     hierarchical_noisy_measurement: bool = True,
 
+                    use_sionna_dataset: bool = False,
+                    sionna_dataset_pickle_path: Optional[str] = None,
+
                     gamma: float = 0.99,
                     _greedy_mode: bool = False,
                     
@@ -124,6 +127,10 @@ class Parameters :
         self.type_modulation = type_modulation
         self.hierarchical_noisy_measurement = hierarchical_noisy_measurement
         
+        ### For importing sionna dataset ###
+        self.use_sionna_dataset = use_sionna_dataset
+        self.sionna_dataset_pickle_path = sionna_dataset_pickle_path
+
         ### For the codebook ###
         self.size_codebooks = size_codebooks
         print(f'size_codebooks : {size_codebooks}')
@@ -231,6 +238,8 @@ class Parameters :
         return {
             # Experiment
             "experiment_seed": self.experiment_seed,
+            "use_sionna_dataset": self.use_sionna_dataset,
+            "sionna_dataset_pickle_path": self.sionna_dataset_pickle_path,
 
             # System / channel
             "N_R": self.N_R,

@@ -11,10 +11,11 @@ from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
 def main():
     all_size_of_codebooks = [
-                                [8, 14], # session dqn lame20 from 40 et lame21 from 44
-                                # [16, 30], # session DQN lame22 from 41 et lame25 from 45
+                                # [8, 14], 
+                                [16, 30], 
                                 # [32, 62],
-                                # [64, 126]
+                                # [64, 126],
+                                # [32, 62]
                             ]
 
     all_codebook_specs = [
@@ -22,14 +23,18 @@ def main():
                             #     CodebookSpec(kind="narrow", N=8),
                             #     CodebookSpec(kind="hierarchical", K=3, M=2)
                             # ],
-                            # [
-                            #     CodebookSpec(kind="narrow", N=16),
-                            #     CodebookSpec(kind="hierarchical", K=4, M=2)
-                            # ],
                             [
-                                CodebookSpec(kind="narrow", N=8),
-                                CodebookSpec(kind="dft", N=14)
+                                CodebookSpec(kind="narrow", N=16),
+                                CodebookSpec(kind="hierarchical", K=4, M=2)
                             ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=32),
+                            #     CodebookSpec(kind="hierarchical", K=5, M=2),
+                            # ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=8),
+                            #     CodebookSpec(kind="dft", N=14)
+                            # ],
                             # [
                             #     CodebookSpec(kind="narrow", N=16),
                             #     CodebookSpec(kind="dft", N=30)
@@ -57,7 +62,7 @@ def main():
 
             parameters = Parameters(    
                 experiment_note = (
-                    # "Hierarchical baseline tested with noisy pilot measurements."
+                    "Hierarchical baseline tested with noisy pilot measurements."
                     f"Communication codebook = {comm_kind} ({size_codebooks[0]} codewords). "
                     f"Pilot codebook = {pilot_kind} ({size_codebooks[1]} codewords)."
                     f"Delta = {delta}. Tau = 0.001."
@@ -72,15 +77,18 @@ def main():
                 codebook_specs = codebook_specs,
 
                 SNR = 10,
-                # snr_values = [0,5,10,20],
-                snr_values = [20],
+                snr_values = [0,5,10,20],
+                # snr_values = [20],
                 type_channel = "half-spaced ULAs",
                 type_modulation = "BPSK", 
                 mean_noise = 0,
                 mean_channel = 0, 
                 std_channel=  [], 
                 sigma_alpha = 0, 
-                hierarchical_noisy_measurement = False,
+                hierarchical_noisy_measurement = True,
+
+                use_sionna_dataset=True,
+                sionna_dataset_pickle_path="PATH/TO/YOUR/SIONNA_DATASET.pkl",
 
                 gamma = 0.94,
                 _greedy_mode = False,
@@ -103,14 +111,14 @@ def main():
                 batch_size = 256,
                 replay_buffer_memory_size = 120000,
 
-                # n_epochs=10000,
-                n_epochs = 10,
+                n_epochs=20000,
+                # n_epochs = 10,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
-                # n_episodes = 10000,
-                n_episodes = 10,
+                n_episodes = 10000,
+                # n_episodes = 10,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -126,21 +134,21 @@ def main():
                 
                 Train_Deep_Q_Learning = True,
                 Train_Q_Learning = True,
-                # saving_freq = 500,
-                saving_freq = 2,
+                saving_freq = 500,
+                # saving_freq = 2,
                 test_freq = 1,
                 # test_freq = 500,
 
-                continue_training = False,
-                recover_checkpoint_path = "./Data/Example_34",
+                continue_training = True,
+                recover_checkpoint_path = "./Data/Example_59",
 
                 enable_async_eval = True,
                 async_eval_poll_seconds = 10,
                 async_eval_device = "cpu",
                 
                 precision = 2,  
-                # len_window_channel = 10,
-                len_window_channel = 14,
+                len_window_channel = 10,
+                # len_window_channel = 14,
                 # len_window_channel = 30,
                 modification_channel = 0,
                 min_representatives_q_learning_train = 100,
