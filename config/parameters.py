@@ -258,7 +258,6 @@ class Parameters :
 
             # Codebooks
             "codebook_specs": [vars(spec) for spec in self.codebook_specs],
-            "codebook_specs": self.codebook_specs,
         }
     
     def get_q_learning_parameters(self):

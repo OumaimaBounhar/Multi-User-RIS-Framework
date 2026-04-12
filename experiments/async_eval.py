@@ -31,8 +31,8 @@ def async_eval_worker(
     )
 
     context = builder.build(
-        dataset_mode=DatasetMode.REUSE,
-        noise_mode=NoiseMode.REUSE
+        dataset_mode=None,
+        noise_mode=None
     )
 
     runner = Runner(context=context)

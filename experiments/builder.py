@@ -72,7 +72,7 @@ class ExperimentBuilder:
                 dataset_mode = DatasetMode.IMPORT_SIONNA
             else:
                 dataset_mode = (
-                    DatasetMode.REUSE
+                    DatasetMode.LOAD_GENERATED
                     if self.parameters.continue_training
                     else DatasetMode.GENERATE
                 )
@@ -89,22 +89,31 @@ class ExperimentBuilder:
             noisy_samples = True
             )
 
-        # Generate noise parameters (mean,std) 
+        ## Generate noise parameters (mean,std) 
         if noise_mode is None:
-            noise_mode = (
-                NoiseMode.REUSE
-                if self.parameters.continue_training
-                else NoiseMode.FIT
+            if self.parameters.use_sionna_dataset:
+                noise_mode = NoiseMode.ANALYTICAL
+            else:
+                noise_mode = (
+                    NoiseMode.REUSE
+                    if self.parameters.continue_training
+                    else NoiseMode.FIT
+                )
+
+        if self.parameters.use_sionna_dataset and noise_mode == NoiseMode.FIT:
+            raise ValueError(
+                "NoiseMode.FIT is not supported with use_sionna_dataset=True. "
+                "Use NoiseMode.ANALYTICAL for now. Change to NoiseMode.FIT_SIONNA if I want to fit noise parameters on the imported Sionna dataset."
             )
-        
+
         noise_factory = NoiseFactory()
 
         noise_parameters = noise_factory.get_noise_params(
-            parameters = self.parameters,
-            noise_mode=noise_mode, 
-            store = self.store,
-            feedback = feedback,
-            channel = channel 
+            parameters=self.parameters,
+            noise_mode=noise_mode,
+            store=self.store,
+            feedback=feedback,
+            channel=channel
         )
 
         # Probability

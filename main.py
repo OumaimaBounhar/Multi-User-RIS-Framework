@@ -11,22 +11,22 @@ from reinforcement_learning.deep_q_learning.components.seed import set_seed
 
 def main():
     all_size_of_codebooks = [
-                                # [8, 14], 
-                                [16, 30], 
+                                [8, 14], 
+                                # [16, 30], 
                                 # [32, 62],
                                 # [64, 126],
                                 # [32, 62]
                             ]
 
     all_codebook_specs = [
-                            # [
-                            #     CodebookSpec(kind="narrow", N=8),
-                            #     CodebookSpec(kind="hierarchical", K=3, M=2)
-                            # ],
                             [
-                                CodebookSpec(kind="narrow", N=16),
-                                CodebookSpec(kind="hierarchical", K=4, M=2)
+                                CodebookSpec(kind="narrow", N=8),
+                                CodebookSpec(kind="hierarchical", K=3, M=2)
                             ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=16),
+                            #     CodebookSpec(kind="hierarchical", K=4, M=2)
+                            # ],
                             # [
                             #     CodebookSpec(kind="narrow", N=32),
                             #     CodebookSpec(kind="hierarchical", K=5, M=2),
@@ -62,10 +62,12 @@ def main():
 
             parameters = Parameters(    
                 experiment_note = (
-                    "Hierarchical baseline tested with noisy pilot measurements."
+                    # "Hierarchical baseline tested with noisy pilot measurements."
+                    "Dft pilot codebook and narrow communication codebook."
+                    f" Using Sionna dataset = True. "
                     f"Communication codebook = {comm_kind} ({size_codebooks[0]} codewords). "
                     f"Pilot codebook = {pilot_kind} ({size_codebooks[1]} codewords)."
-                    f"Delta = {delta}. Tau = 0.001."
+                    f"Delta = {delta}. Tau = 0.005."
                 ),
                 experiment_seed = base_seed,
 
@@ -88,7 +90,7 @@ def main():
                 hierarchical_noisy_measurement = True,
 
                 use_sionna_dataset=True,
-                sionna_dataset_pickle_path="PATH/TO/YOUR/SIONNA_DATASET.pkl",
+                sionna_dataset_pickle_path="./dataset/last_sionna_rl_dataset_comm8_pilot14_minrep100.pickle",
 
                 gamma = 0.94,
                 _greedy_mode = False,
@@ -111,14 +113,14 @@ def main():
                 batch_size = 256,
                 replay_buffer_memory_size = 120000,
 
-                n_epochs=20000,
-                # n_epochs = 10,
+                # n_epochs=20000,
+                n_epochs = 5,
                 n_time_steps_dqn = 64,
                 n_channels_train_DQN = 5,
                 # n_channels_train_DQN=1,
                 
-                n_episodes = 10000,
-                # n_episodes = 10,
+                # n_episodes = 10000,
+                n_episodes = 5,
                 n_time_steps_ql = 64,
                 n_channels_train_QL = 5,
                 # n_channels_train_QL = 1,
@@ -128,7 +130,7 @@ def main():
                 max_norm = 0.5,
                 do_gradient_clipping = True,
                 
-                tau = 0.001,
+                tau = 0.005,
                 freq_update_target = 100,
                 targetNet_update_method = "soft",
                 
@@ -139,7 +141,7 @@ def main():
                 test_freq = 1,
                 # test_freq = 500,
 
-                continue_training = True,
+                continue_training = False,
                 recover_checkpoint_path = "./Data/Example_59",
 
                 enable_async_eval = True,

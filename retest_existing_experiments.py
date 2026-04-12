@@ -291,7 +291,7 @@ def main() -> None:
 
     builder = ExperimentBuilder(parameters=parameters, store=store)
     context = builder.build(
-        dataset_mode=DatasetMode.REUSE,
+        dataset_mode=DatasetMode.LOAD_GENERATED,
         noise_mode=NoiseMode.REUSE,
     )
     runner = Runner(context=context)
