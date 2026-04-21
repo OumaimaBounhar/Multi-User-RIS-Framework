@@ -71,21 +71,6 @@ class Test:
                 "track_success": False,
             })
 
-        # If later you implement a DFT-specific baseline, put it here
-        elif pilot_kind == "dft":
-            specs.append({
-                "label": "DFT sampling",
-                "run": methods.dft_sampling,
-                "track_success": False,
-            })
-
-        # Always available
-        specs.append({
-            "label": "Random sampling",
-            "run": methods.random_sampling,
-            "track_success": False,
-        })
-
         if mode == "dqn":
             specs.append({
                 "label": "Deep Q-Learning",
@@ -99,6 +84,11 @@ class Test:
                 "run": methods.q_learning_sampling,
                 "track_success": True,
             })
+            specs.append({
+            "label": "Random sampling",
+            "run": methods.random_sampling,
+            "track_success": False,
+            })
 
         else:  # both
             specs.append({
@@ -110,6 +100,11 @@ class Test:
                 "label": "Q-Learning",
                 "run": methods.q_learning_sampling,
                 "track_success": False,
+            })
+            specs.append({
+            "label": "Random sampling",
+            "run": methods.random_sampling,
+            "track_success": False,
             })
 
         return specs
@@ -176,7 +171,7 @@ class Test:
         """
         print(f"[TEST] ENTER test(): epoch={epoch}, mode={mode}")
         n_ex = 500 # Number of times we simulate the channel for each SNR
-        T = 10     # Time steps for the evolution of the channel
+        T = 8     # Time steps for the evolution of the channel
         
         objs = testing_objects_dict
         paths = objs["paths"]
@@ -433,33 +428,33 @@ class Test:
         plt.savefig(paths.test_strength_plot(epoch, SNR))
         plt.close()
 
-        # 3. Conditional normalized power plot on success
-        plt.figure(figsize=(10, 6))
-        plt.plot(np.arange(1, T + 1), normalized_power_on_success, label=label)
-        plt.legend()
-        plt.title(
-            f'Average Normalized Power Conditioned on Success\n'
-            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
-        )
-        plt.xlabel('Number of pilots')
-        plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | success')
-        plt.grid()
-        plt.savefig(paths.test_strength_success_plot(epoch, SNR))
-        plt.close()
+        # # 3. Conditional normalized power plot on success
+        # plt.figure(figsize=(10, 6))
+        # plt.plot(np.arange(1, T + 1), normalized_power_on_success, label=label)
+        # plt.legend()
+        # plt.title(
+        #     f'Average Normalized Power Conditioned on Success\n'
+        #     f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
+        # )
+        # plt.xlabel('Number of pilots')
+        # plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | success')
+        # plt.grid()
+        # plt.savefig(paths.test_strength_success_plot(epoch, SNR))
+        # plt.close()
 
-        # 5. Conditional normalized power plot on failure
-        plt.figure(figsize=(10, 6))
-        plt.plot(np.arange(1, T + 1), normalized_power_on_failure, label=label)
-        plt.legend()
-        plt.title(
-            f'Average Normalized Power Conditioned on Failure\n'
-            f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
-        )
-        plt.xlabel('Number of pilots')
-        plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | failure')
-        plt.grid()
-        plt.savefig(paths.test_strength_failure_plot(epoch, SNR))
-        plt.close()
+        # # 5. Conditional normalized power plot on failure
+        # plt.figure(figsize=(10, 6))
+        # plt.plot(np.arange(1, T + 1), normalized_power_on_failure, label=label)
+        # plt.legend()
+        # plt.title(
+        #     f'Average Normalized Power Conditioned on Failure\n'
+        #     f'Epoch={epoch} | SNR={SNR} dB | Communication: {comm_kind} ({comm_size}) | Pilots: {pilot_kind} ({pilot_size})'
+        # )
+        # plt.xlabel('Number of pilots')
+        # plt.ylabel(r'$P(\hat{\phi}) / P(\phi^\star)$ | failure')
+        # plt.grid()
+        # plt.savefig(paths.test_strength_failure_plot(epoch, SNR))
+        # plt.close()
 
         # 6. Successful episodes plot
         plt.figure(figsize=(10, 6))

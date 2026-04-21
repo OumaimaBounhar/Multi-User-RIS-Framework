@@ -19,10 +19,10 @@ def main():
                             ]
 
     all_codebook_specs = [
-                            [
-                                CodebookSpec(kind="narrow", N=8),
-                                CodebookSpec(kind="hierarchical", K=3, M=2)
-                            ],
+                            # [
+                            #     CodebookSpec(kind="narrow", N=8),
+                            #     CodebookSpec(kind="hierarchical", K=3, M=2)
+                            # ],
                             # [
                             #     CodebookSpec(kind="narrow", N=16),
                             #     CodebookSpec(kind="hierarchical", K=4, M=2)
@@ -31,10 +31,10 @@ def main():
                             #     CodebookSpec(kind="narrow", N=32),
                             #     CodebookSpec(kind="hierarchical", K=5, M=2),
                             # ],
-                            # [
-                            #     CodebookSpec(kind="narrow", N=8),
-                            #     CodebookSpec(kind="dft", N=14)
-                            # ],
+                            [
+                                CodebookSpec(kind="narrow", N=8),
+                                CodebookSpec(kind="dft", N=14)
+                            ],
                             # [
                             #     CodebookSpec(kind="narrow", N=16),
                             #     CodebookSpec(kind="dft", N=30)
@@ -64,7 +64,9 @@ def main():
                 experiment_note = (
                     # "Hierarchical baseline tested with noisy pilot measurements."
                     "Dft pilot codebook and narrow communication codebook."
-                    f" Using Sionna dataset = True. "
+                    f"Using Sionna dataset = False. "
+                    f"Save channels in dataset = True."
+                    f"Train_Q_Learning = False, Train_Deep_Q_Learning = False."
                     f"Communication codebook = {comm_kind} ({size_codebooks[0]} codewords). "
                     f"Pilot codebook = {pilot_kind} ({size_codebooks[1]} codewords)."
                     f"Delta = {delta}. Tau = 0.005."
@@ -89,8 +91,9 @@ def main():
                 sigma_alpha = 0, 
                 hierarchical_noisy_measurement = True,
 
-                use_sionna_dataset=True,
+                use_sionna_dataset=False,
                 sionna_dataset_pickle_path="./dataset/last_sionna_rl_dataset_comm8_pilot14_minrep100.pickle",
+                save_channels_in_dataset = True,
 
                 gamma = 0.94,
                 _greedy_mode = False,
@@ -114,15 +117,15 @@ def main():
                 replay_buffer_memory_size = 120000,
 
                 # n_epochs=20000,
-                n_epochs = 5,
+                n_epochs = 1000,
                 n_time_steps_dqn = 64,
-                n_channels_train_DQN = 5,
+                n_channels_train_DQN = 50,
                 # n_channels_train_DQN=1,
                 
                 # n_episodes = 10000,
-                n_episodes = 5,
+                n_episodes = 1000,
                 n_time_steps_ql = 64,
-                n_channels_train_QL = 5,
+                n_channels_train_QL = 50,
                 # n_channels_train_QL = 1,
                 max_len_path = 20,
                 len_path = 20,
@@ -134,10 +137,10 @@ def main():
                 freq_update_target = 100,
                 targetNet_update_method = "soft",
                 
-                Train_Deep_Q_Learning = True,
-                Train_Q_Learning = True,
-                saving_freq = 500,
-                # saving_freq = 2,
+                Train_Deep_Q_Learning = False,
+                Train_Q_Learning = False,
+                saving_freq = 10,
+                # saving_freq = 1,
                 test_freq = 1,
                 # test_freq = 500,
 
@@ -145,7 +148,8 @@ def main():
                 recover_checkpoint_path = "./Data/Example_59",
 
                 enable_async_eval = True,
-                async_eval_poll_seconds = 10,
+                # async_eval_poll_seconds = 10, # for quick testing of the async eval loop
+                async_eval_poll_seconds = 300, # 5 minutes between each check for new checkpoints to test
                 async_eval_device = "cpu",
                 
                 precision = 2,  
@@ -245,7 +249,14 @@ def main():
                     print("[MAIN] async worker joined.")
                         
             try:
-                runner.run_testing(q_policy, dqn_agent, dqn_policy)
+                has_dqn = (dqn_agent is not None and dqn_policy is not None)
+                has_ql = (q_policy is not None)
+
+                if has_dqn or has_ql:
+                    runner.run_testing(q_policy, dqn_agent, dqn_policy)
+                else:
+                    print("[INFO] No training enabled. Dataset/noise generation completed. Skipping final testing.")
+                
             except Exception as e:
                 print(f"[ERROR] Final testing failed: {e}")
 

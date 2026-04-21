@@ -136,12 +136,13 @@ class Methods:
         self.counter_exhaustive = count
         return argmax_RSE
     
-    # def dft_sampling(
-    #     self
-    # ) -> int:
+    # def dft_sampling(self) -> int:
     #     """
-    #     Sequential DFT pilot sweep baseline:
-    #     test pilot beams deterministically in order 0,1,2,... and update posterior.
+    #     Sequential DFT pilot sweep baseline.
+
+    #     The posterior is updated using only the samples collected in the
+    #     current channel window, but the DFT pilot index continues across
+    #     windows instead of restarting from 0 every time.
     #     """
     #     size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
     #     pilot_kind = codebook_specs[1].kind.lower()
@@ -153,10 +154,10 @@ class Methods:
 
     #     prior = self.prior_dft
     #     ordered_list = self.ordered_list_dft
-    #     counter = self.counter_dft
     #     samples = self.list_dft
 
-    #     index_codeword_tested = counter % size_codebooks[1]
+    #     # Continue the DFT sweep globally across windows
+    #     index_codeword_tested = self.cursor_dft % size_codebooks[1]
 
     #     self.feedback.transmit(index_codeword_tested, codebook_used=1)
     #     rse = self.feedback.get_feedback(noise=True)
@@ -169,65 +170,19 @@ class Methods:
 
     #     best_codeword = ordered_list[0]
 
-    #     counter += 1
-    #     self.counter_dft = counter
+    #     # Advance both counters
+    #     self.cursor_dft += 1
+    #     self.counter_dft_window += 1
 
-    #     if counter == self.len_window_channel:
+    #     # End of local channel window: refresh prior, clear only local samples
+    #     if self.counter_dft_window == self.len_window_channel:
     #         prior, ordered_list = self.probability.update_proba_channel(prior)
     #         self.prior_dft = prior
     #         self.ordered_list_dft = ordered_list
-    #         self.counter_dft = 0
+    #         self.counter_dft_window = 0
     #         self.list_dft = []
 
     #     return best_codeword
-
-    def dft_sampling(self) -> int:
-        """
-        Sequential DFT pilot sweep baseline.
-
-        The posterior is updated using only the samples collected in the
-        current channel window, but the DFT pilot index continues across
-        windows instead of restarting from 0 every time.
-        """
-        size_codebooks, codebook_specs = self.parameters.get_codebook_parameters()
-        pilot_kind = codebook_specs[1].kind.lower()
-
-        if pilot_kind != "dft":
-            raise RuntimeError(
-                "[ERROR] dft_sampling() was called but pilot codebook is not DFT."
-            )
-
-        prior = self.prior_dft
-        ordered_list = self.ordered_list_dft
-        samples = self.list_dft
-
-        # Continue the DFT sweep globally across windows
-        index_codeword_tested = self.cursor_dft % size_codebooks[1]
-
-        self.feedback.transmit(index_codeword_tested, codebook_used=1)
-        rse = self.feedback.get_feedback(noise=True)
-        samples.append((rse, index_codeword_tested))
-        self.list_dft = samples
-
-        prior, ordered_list = self.probability.update(prior, ordered_list, samples)
-        self.posterior_dft = prior
-        self.ordered_list_dft = ordered_list
-
-        best_codeword = ordered_list[0]
-
-        # Advance both counters
-        self.cursor_dft += 1
-        self.counter_dft_window += 1
-
-        # End of local channel window: refresh prior, clear only local samples
-        if self.counter_dft_window == self.len_window_channel:
-            prior, ordered_list = self.probability.update_proba_channel(prior)
-            self.prior_dft = prior
-            self.ordered_list_dft = ordered_list
-            self.counter_dft_window = 0
-            self.list_dft = []
-
-        return best_codeword
     
     def hierarchical(self, noisy_measurement: bool = True)->int:
         """
@@ -290,43 +245,43 @@ class Methods:
             
         return self.hierarchical_best_beam
     
-    def random_sampling(self)->int:
-        ### Randomly selects pilots, then compute probability, with noise ###
-        size_codebooks, _ = self.parameters.get_codebook_parameters()
-        prior = self.prior_random
-        ordered_list = self.ordered_list_random
-        counter = self.counter_random
-        Samples = self.list_random 
+    # def random_sampling(self)->int:
+    #     ### Randomly selects pilots, then compute probability, with noise ###
+    #     size_codebooks, _ = self.parameters.get_codebook_parameters()
+    #     prior = self.prior_random
+    #     ordered_list = self.ordered_list_random
+    #     counter = self.counter_random
+    #     Samples = self.list_random 
             
-        ### Pilot sent ###
-        index_codeword_tested = r.randint(0, size_codebooks[1]-1)
+    #     ### Pilot sent ###
+    #     index_codeword_tested = r.randint(0, size_codebooks[1]-1)
             
-        self.feedback.transmit(index_codeword_tested,codebook_used=1)
-        RSE = self.feedback.get_feedback(noise = True)
-        Samples.append((RSE,index_codeword_tested))
-        self.list_random = Samples
+    #     self.feedback.transmit(index_codeword_tested,codebook_used=1)
+    #     RSE = self.feedback.get_feedback(noise = True)
+    #     Samples.append((RSE,index_codeword_tested))
+    #     self.list_random = Samples
         
-        ### Update Probability ###
-        prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
-        self.ordered_list_random = ordered_list
-        self.posterior_random = prior
+    #     ### Update Probability ###
+    #     prior,ordered_list = self.probability.update(prior,ordered_list,Samples)
+    #     self.ordered_list_random = ordered_list
+    #     self.posterior_random = prior
         
-        best_codeword = ordered_list[0]
+    #     best_codeword = ordered_list[0]
 
-        counter += 1
-        self.counter_random = counter
+    #     counter += 1
+    #     self.counter_random = counter
         
-        # if the channel changed too much we update the proba
-        if counter == self.len_window_channel:
-            prior,ordered_list = self.probability.update_proba_channel(prior)
-            self.prior_random = prior
-            self.ordered_list_random = ordered_list
-            counter = 0
-            self.counter_random = counter
-            Samples = []
-            self.list_random = Samples
+    #     # if the channel changed too much we update the proba
+    #     if counter == self.len_window_channel:
+    #         prior,ordered_list = self.probability.update_proba_channel(prior)
+    #         self.prior_random = prior
+    #         self.ordered_list_random = ordered_list
+    #         counter = 0
+    #         self.counter_random = counter
+    #         Samples = []
+    #         self.list_random = Samples
             
-        return best_codeword 
+    #     return best_codeword 
     
     def q_learning_sampling(self)->int:
         ###  Selects pilots with Q-learning policy, then compute probability, with noise ###
