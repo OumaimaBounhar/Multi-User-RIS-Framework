@@ -74,6 +74,7 @@ class DatasetFactory:
                 Noisy_samples= noisy_samples
                 )
             store.save_dataset(dataset)
+            store.save_channel_exports(dataset)
             print(f"[INFO] Dataset saved to {store.paths.dataset_pickle}")
 
             return dataset

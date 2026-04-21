@@ -34,6 +34,15 @@ class Dataset_probability:
         self.min_representatives = min_representatives
         self.max_samples = 2*min_representatives*parameters.size_codebooks[0]  
         self.Noisy_samples = Noisy_samples
+
+        # Optional storage
+        if self.parameters.save_channels_in_dataset:
+            self.full_channels_with_ris = []
+            self.direct_channels = []
+        else:
+            self.full_channels_with_ris = None
+            self.direct_channels = None
+
         # If a dataset is available put it here
         self.set_new_MC()
         
@@ -67,14 +76,36 @@ class Dataset_probability:
             for sample in tqdm(range(self.max_samples//len(self.parameters.snr_values))):
 
                 self.channel.new_channel() # Generates a new channel
+
+                # Get raw channel parts
+                h_T, h_R, h_D = self.channel.get_channel()
                 
+                # -------- Find best communication codeword --------
                 List_RSE_communication = []
                 for n_communications in range(size_codebooks[0]):
                     self.feedback.transmit(n_communications,codebook_used=0)
                     RSE = self.feedback.get_feedback(noise = False) # No noise for the class of the channel
                     List_RSE_communication.append(RSE)
+
                 argmax_RSE_communication = np.argmax(List_RSE_communication)
+
+                # Save channels only if requested
+                if self.parameters.save_channels_in_dataset:
+                    phi_best = self.codebooks.get_codeword(
+                        codebook_index=0, # Communication codebook
+                        codeword_index=argmax_RSE_communication
+                    )
+                    psi_best = np.diagflat(phi_best)
+
+                    if self.parameters.N_RIS != 0:
+                        h_full_best = h_R @ psi_best @ h_T + h_D
+                    else:
+                        h_full_best = h_D.copy()
+
+                    self.direct_channels.append(np.array(h_D, dtype=np.complex128))
+                    self.full_channels_with_ris.append(np.array(h_full_best, dtype=np.complex128))
                 
+                # Pilot-feedback storage
                 List_RSE_pilots = []
                 for n_pilots in range(size_codebooks[1]):
                     self.feedback.transmit(n_pilots,codebook_used=1)
@@ -97,6 +128,13 @@ class Dataset_probability:
         self.n_representant_class = n_representant_class
         self.List_Representant_Classes = List_Representant_Classes
 
+        if self.parameters.save_channels_in_dataset:
+            self.full_channels_with_ris = np.array(self.full_channels_with_ris, dtype=np.complex128)
+            self.direct_channels = np.array(self.direct_channels, dtype=np.complex128)
+
+            print(f"[INFO] Saved full RIS channels shape: {self.full_channels_with_ris.shape}")
+            print(f"[INFO] Saved direct channels shape: {self.direct_channels.shape}")
+
         print(f"Sample generation complete: {n_samples} total samples collected.")
 
     #def get_representant_class(self):
@@ -113,3 +151,9 @@ class Dataset_probability:
         """ Used when we saved the dataset somewhere 
         to reuse the same parameters and codebooks as the one used to generate the dataset"""
         return self.parameters, self.codebooks
+    
+    def get_full_channels_with_ris(self):
+        return self.full_channels_with_ris
+
+    def get_direct_channels(self):
+        return self.direct_channels

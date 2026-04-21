@@ -38,6 +38,7 @@ class Parameters :
 
                     use_sionna_dataset: bool = False,
                     sionna_dataset_pickle_path: Optional[str] = None,
+                    save_channels_in_dataset: bool = False,
 
                     gamma: float = 0.99,
                     _greedy_mode: bool = False,
@@ -130,6 +131,7 @@ class Parameters :
         ### For importing sionna dataset ###
         self.use_sionna_dataset = use_sionna_dataset
         self.sionna_dataset_pickle_path = sionna_dataset_pickle_path
+        self.save_channels_in_dataset = save_channels_in_dataset
 
         ### For the codebook ###
         self.size_codebooks = size_codebooks
@@ -240,7 +242,8 @@ class Parameters :
             "experiment_seed": self.experiment_seed,
             "use_sionna_dataset": self.use_sionna_dataset,
             "sionna_dataset_pickle_path": self.sionna_dataset_pickle_path,
-
+            "save_channels_in_dataset": self.save_channels_in_dataset,
+            
             # System / channel
             "N_R": self.N_R,
             "N_T": self.N_T,

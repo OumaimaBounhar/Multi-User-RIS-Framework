@@ -1,4 +1,5 @@
 import os, pickle
+import numpy as np
 import pandas as pd
 from typing import Tuple, Union
 from dataclasses import dataclass
@@ -56,6 +57,26 @@ class ExperimentPaths:
     @property
     def dataset_pickle(self) -> str:
         return os.path.join(self.dataset_dir, "Dataset.pickle")
+    
+    @property
+    def full_channels_npy(self) -> str:
+        return os.path.join(self.dataset_dir, "full_channels_with_ris.npy")
+
+    @property
+    def direct_channels_npy(self) -> str:
+        return os.path.join(self.dataset_dir, "direct_channels.npy")
+
+    @property
+    def full_channel_norms_csv(self) -> str:
+        return os.path.join(self.dataset_dir, "full_channel_norms.csv")
+
+    @property
+    def direct_channel_norms_csv(self) -> str:
+        return os.path.join(self.dataset_dir, "direct_channel_norms.csv")
+
+    @property
+    def channel_norms_summary_txt(self) -> str:
+        return os.path.join(self.dataset_dir, "channel_norms_summary.txt")
     
     # --------------------------- Q-Learning  ---------------------------
     @property
@@ -412,3 +433,45 @@ class Store:
         df = pd.read_csv(self.paths.noise_csv)
         return float(df["Mean"].iloc[0]), float(df["Std"].iloc[0])
     
+    def save_channel_exports(self, dataset_obj) -> None:
+        if not hasattr(dataset_obj, "get_full_channels_with_ris"):
+            return
+
+        H_full = dataset_obj.get_full_channels_with_ris()
+        H_direct = dataset_obj.get_direct_channels()
+
+        if H_full is None or H_direct is None:
+            return
+
+        np.save(self.paths.full_channels_npy, H_full)
+        np.save(self.paths.direct_channels_npy, H_direct)
+
+        full_norms = np.linalg.norm(H_full.reshape(H_full.shape[0], -1), axis=1)
+        direct_norms = np.linalg.norm(H_direct.reshape(H_direct.shape[0], -1), axis=1)
+
+        np.savetxt(self.paths.full_channel_norms_csv, full_norms, delimiter=",")
+        np.savetxt(self.paths.direct_channel_norms_csv, direct_norms, delimiter=",")
+
+        # Argmax info
+        argmax_full = int(np.argmax(full_norms))
+        argmax_direct = int(np.argmax(direct_norms))
+        
+        with open(self.paths.channel_norms_summary_txt, "w") as f:
+            f.write("CHANNEL NORMS SUMMARY\n")
+            f.write("=====================\n\n")
+
+            f.write(f"Number of saved samples: {H_full.shape[0]}\n\n")
+
+            f.write("[FULL CHANNEL WITH RIS]\n")
+            f.write(f"Shape: {H_full.shape}\n")
+            f.write(f"Max norm: {full_norms[argmax_full]:.10f}\n")
+            f.write(f"Argmax sample index: {argmax_full}\n")
+            f.write(f"Mean norm: {np.mean(full_norms):.10f}\n")
+            f.write(f"Std norm: {np.std(full_norms):.10f}\n\n")
+
+            f.write("[DIRECT CHANNEL]\n")
+            f.write(f"Shape: {H_direct.shape}\n")
+            f.write(f"Max norm: {direct_norms[argmax_direct]:.10f}\n")
+            f.write(f"Argmax sample index: {argmax_direct}\n")
+            f.write(f"Mean norm: {np.mean(direct_norms):.10f}\n")
+            f.write(f"Std norm: {np.std(direct_norms):.10f}\n")
